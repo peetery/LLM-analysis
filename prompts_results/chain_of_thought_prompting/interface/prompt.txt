@@ -1,0 +1,70 @@
+1)
+You are a software testing assistant. Your task is to generate a set of unit tests for a Python class provided below.
+
+The tests should:
+- use the `unittest` framework,
+- cover all public methods,
+- test typical usage as well as edge cases, invalid inputs, and exceptions,
+- be clear, atomic, and minimal.
+
+You will now analyze the class to prepare relevant test cases.
+Do not write test code yet. Do not write test scenarios yet. Just analyze the class and prepare for the next step.
+
+Below is the class interface (without implementation):
+
+```python
+from typing import TypedDict, List
+
+
+class Item(TypedDict)
+
+class OrderCalculator:
+    def __init__(self, tax_rate=0.23, free_shipping_threshold=100.0, shipping_cost=10.0):
+
+    def add_item(self, name: str, price: float, quantity: int = 1):
+
+    def remove_item(self, name: str):
+
+    def get_subtotal(self) -> float:
+
+    def apply_discount(self, subtotal: float, discount: float) -> float:
+
+    def calculate_shipping(self, discounted_subtotal: float) -> float:
+
+    def calculate_tax(self, amount: float) -> float:
+
+    def calculate_total(self, discount: float = 0.0) -> float:
+
+    def total_items(self) -> int:
+
+    def clear_order(self):
+
+    def list_items(self) -> List[str]:
+
+	def is_empty(self) -> bool:
+
+```
+
+
+
+2)
+Based on the class above, list all relevant unit test scenarios you would create.
+Each scenario should describe:
+- the method being tested,
+- the type of case (e.g. normal use, invalid input, exception),
+- a short explanation of the intent.
+List as many scenarios as you can think of, covering all aspects of the class.
+Do not write test code yet.
+
+
+
+3)
+Now, based on the test scenarios you just listed, generate the complete Python unit test suite using the `unittest` framework.
+
+Follow these rules:
+- Include one test method per scenario.
+- Use meaningful test method names.
+- Do not include comments or explanations.
+- Output a valid `.py` file containing only the test class.
+
+The output must contain only Python code.

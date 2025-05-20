@@ -1,0 +1,48 @@
+Generate a complete Python unit test suite for the class `OrderCalculator`.
+
+Instructions:
+- Use the `unittest` framework.
+- Include tests for all public methods of the class.
+- Ensure proper coverage of:
+  • typical use cases,
+  • edge cases (corner cases),
+  • incorrect input (invalid types or values),
+  • exceptions.
+- Each test should be clear, minimal and atomic (test one behavior at a time).
+- Avoid comments or explanations — output only the test code.
+- Return a single valid Python file with a class extending `unittest.TestCase`.
+
+Below is the class interface (without implementation):
+
+```python
+from typing import TypedDict, List
+
+
+class Item(TypedDict)
+
+class OrderCalculator:
+    def __init__(self, tax_rate=0.23, free_shipping_threshold=100.0, shipping_cost=10.0):
+
+    def add_item(self, name: str, price: float, quantity: int = 1):
+
+    def remove_item(self, name: str):
+
+    def get_subtotal(self) -> float:
+
+    def apply_discount(self, subtotal: float, discount: float) -> float:
+
+    def calculate_shipping(self, discounted_subtotal: float) -> float:
+
+    def calculate_tax(self, amount: float) -> float:
+
+    def calculate_total(self, discount: float = 0.0) -> float:
+
+    def total_items(self) -> int:
+
+    def clear_order(self):
+
+    def list_items(self) -> List[str]:
+
+	def is_empty(self) -> bool:
+
+```
