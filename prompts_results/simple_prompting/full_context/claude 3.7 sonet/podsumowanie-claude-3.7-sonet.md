@@ -8,8 +8,6 @@ Liczba wszystkich własnych scenariuszy: 54
 - Testy zakończone powodzeniem: 46
 - Testy zakończone niepowodzeniem: 0
 
-- Liczby wykrytych corner case'ów: x (niepoprawnie x)
-
 
 - Liczba pokrytych scenariuszy testowych: 46
 - Liczba niepotrzebnych testów: 0
@@ -22,6 +20,7 @@ Liczba wszystkich własnych scenariuszy: 54
 - Brak niepotrzebnych testów. Pokrywa wszystkie najważniejsze scenariusze, w tym podstawowe corner case'y. Jest to imponującę, że mamy zachowaną idealną proporcję testów do scenariuszy.
 - Model wykazuje potencjał do uwzględniania sprawdzania wartości tzw edge case'ów w przypadku ograniczeń dla parametrów sprawdza wartości skrajne czy przechodzą czy nie.
 - Model wykazuje również przyzwoitą kreatywność w sprawdzaniu różnego podejścia do weryfikacji testów i sprawdzania różnych inputów - daje nieoczywiste wartości i sprawdza trudniejsze obliczenia.
+- Świetna organizacja testów i nazewnictwo, pojedyńcze asercje.
 
 ## Minusy
 
