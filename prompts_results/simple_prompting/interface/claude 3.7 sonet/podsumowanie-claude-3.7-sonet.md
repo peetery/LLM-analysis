@@ -1,4 +1,11 @@
 # Podsumowanie analizy pokrycia testów jednostkowych (Model: claude 3.7 sonet)
+# Kontekst: interfejs
+# Strategia promptowania: simple prompting
+
+## coverage.py
+- missing: 18
+- partial: 18
+- coverage: 76%
 
 ## Ogólne informacje
 

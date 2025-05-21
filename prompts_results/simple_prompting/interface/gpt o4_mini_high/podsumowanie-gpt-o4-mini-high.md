@@ -1,5 +1,11 @@
 # Podsumowanie analizy pokrycia testów jednostkowych (Model: gpt o4-mini-high)
-# Metoda: only interface
+# Kontekst: interfejs
+# Strategia promptowania: simple prompting
+
+## coverage.py
+- missing: 9
+- partial: 9
+- coverage: 88%
 
 ## Ogólne informacje
 

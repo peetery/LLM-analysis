@@ -37,10 +37,10 @@ pip-log.txt
 pip-delete-this-directory.txt
 
 # Unit test / coverage reports
-htmlcov/
+prompts_results/simple_prompting/interface/gpt o4_mini_high/htmlcov/
 .tox/
 .nox/
-.coverage
+prompts_results/simple_prompting/interface/gpt o4_mini_high/.coverage
 .coverage.*
 .cache
 nosetests.xml

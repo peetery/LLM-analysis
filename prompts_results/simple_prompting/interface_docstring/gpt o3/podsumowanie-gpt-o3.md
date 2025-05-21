@@ -1,4 +1,11 @@
 # Podsumowanie analizy pokrycia testów jednostkowych (Model: gpt o3)
+# Kontekst: interfejs + docstring
+# Strategia promptowania: simple prompting
+
+## coverage.py
+- missing: 6
+- partial: 6
+- coverage: 92%
 
 ## Ogólne informacje
 

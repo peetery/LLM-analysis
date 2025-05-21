@@ -1,5 +1,11 @@
 # Podsumowanie analizy pokrycia testów jednostkowych (Model: gpt 4.5)
-# Metoda: only interface
+# Kontekst: full context
+# Strategia promptowania: simple prompting
+
+## coverage.py
+- missing: 18
+- partial: 18
+- coverage: 76%
 
 ## Ogólne informacje
 

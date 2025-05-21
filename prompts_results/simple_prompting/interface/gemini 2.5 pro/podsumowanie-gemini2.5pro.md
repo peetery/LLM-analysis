@@ -1,4 +1,11 @@
 # Podsumowanie analizy pokrycia testów jednostkowych (Model: gemini 2.5 pro)
+# Kontekst: interfejs
+# Strategia promptowania: simple prompting
+
+## coverage.py
+- missing: 2
+- partial: 2
+- coverage: 97%
 
 ## Ogólne informacje
 

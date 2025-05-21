@@ -2,6 +2,11 @@
 # Kontekst: full context
 # Strategia promptowania: simple prompting
 
+## coverage.py
+- missing: 1
+- partial: 1
+- coverage: 99%
+
 ## Ogólne informacje
 
 Liczba wszystkich własnych scenariuszy: 54
