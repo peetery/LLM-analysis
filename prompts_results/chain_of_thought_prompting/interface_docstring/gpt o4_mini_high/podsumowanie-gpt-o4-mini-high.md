@@ -1,5 +1,11 @@
 # Podsumowanie analizy pokrycia testów jednostkowych (Model: gpt o4-mini-high)
-# Sposób promptowania: chain-of-thought
+# Kontekst: interfejs + docstring
+# Strategia promptowania: chain-of-thought
+
+## coverage.py
+- missing: 1
+- partial: 1
+- coverage: 99%
 
 ## Ogólne informacje
 

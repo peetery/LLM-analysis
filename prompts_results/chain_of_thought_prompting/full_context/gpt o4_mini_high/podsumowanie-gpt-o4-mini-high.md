@@ -1,6 +1,11 @@
 # Podsumowanie analizy pokrycia testów jednostkowych (Model: gpt o4-mini-high)
-# Metoda: full context
+# Kontekst: full context
 # Strategia promptowania: chain-of-thought
+
+## coverage.py
+- missing: 1
+- partial: 1
+- coverage: 99%
 
 ## Ogólne informacje
 

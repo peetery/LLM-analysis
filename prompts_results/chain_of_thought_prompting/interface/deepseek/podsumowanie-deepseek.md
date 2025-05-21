@@ -1,6 +1,11 @@
 # Podsumowanie analizy pokrycia testów jednostkowych (Model: DeepSeek)
-# Kontekst: interface
+# Kontekst: interfejs
 # Strategia promptowania: chain-of-thought
+
+## coverage.py
+- missing: 17
+- partial: 17
+- coverage: 77%
 
 ## Ogólne informacje
 

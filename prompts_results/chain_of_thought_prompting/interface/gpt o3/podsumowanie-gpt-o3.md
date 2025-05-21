@@ -1,4 +1,11 @@
 # Podsumowanie analizy pokrycia testów jednostkowych (Model: gpt o3)
+# Kontekst: interfejs
+# Strategia promptowania: chain-of-thought
+
+## coverage.py
+- missing: 13
+- partial: 13
+- coverage: 83%
 
 ## Ogólne informacje
 

@@ -1,5 +1,11 @@
 # Podsumowanie analizy pokrycia testów jednostkowych (Model: gpt 4.5)
-# Metoda: only interface
+# Kontekst: full context
+# Strategia promptowania: chain-of-thought
+
+## coverage.py
+- missing: 9
+- partial: 7
+- coverage: 89%
 
 ## Ogólne informacje
 

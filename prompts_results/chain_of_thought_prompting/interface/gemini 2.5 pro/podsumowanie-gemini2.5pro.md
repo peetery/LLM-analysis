@@ -1,4 +1,11 @@
 # Podsumowanie analizy pokrycia testów jednostkowych (Model: gemini 2.5 pro)
+# Kontekst: interfejs
+# Strategia promptowania: chain-of-thought
+
+## coverage.py
+- missing: 1
+- partial: 1
+- coverage: 99%
 
 ## Ogólne informacje
 
