@@ -7,6 +7,9 @@
 - partial: 16
 - coverage: 79%
 
+## mutmut.py
+⠇ 217/217  🎉 108 🫥 0  ⏰ 0  🤔 0  🙁 109  🔇 0
+
 ## Ogólne informacje
 
 Liczba wszystkich własnych scenariuszy: 54
