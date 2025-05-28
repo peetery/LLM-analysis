@@ -1,10 +1,4 @@
 import unittest
-import sys
-import os
-
-current_dir = os.path.dirname(os.path.abspath(__file__))
-root_dir = os.path.abspath(os.path.join(current_dir, '../../../..'))  # cofnięcie się 4 poziomy w górę
-sys.path.append(root_dir)
 
 from order_calculator import OrderCalculator
 
