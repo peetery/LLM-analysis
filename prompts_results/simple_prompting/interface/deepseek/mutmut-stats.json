@@ -1,0 +1,99 @@
+{
+    "tests_by_mangled_function_name": {
+        "order_calculator.x\u01c1OrderCalculator\u01c1add_item": [
+            "tests/mutmut_test.py::TestOrderCalculator::test_calculate_total_no_discount",
+            "tests/mutmut_test.py::TestOrderCalculator::test_add_item_invalid_price",
+            "tests/mutmut_test.py::TestOrderCalculator::test_remove_item_existing",
+            "tests/mutmut_test.py::TestOrderCalculator::test_get_subtotal_multiple_items",
+            "tests/mutmut_test.py::TestOrderCalculator::test_is_empty_false",
+            "tests/mutmut_test.py::TestOrderCalculator::test_list_items_multiple",
+            "tests/mutmut_test.py::TestOrderCalculator::test_clear_order",
+            "tests/mutmut_test.py::TestOrderCalculator::test_add_item_invalid_quantity"
+        ],
+        "order_calculator.x\u01c1OrderCalculator\u01c1__init__": [
+            "tests/mutmut_test.py::TestOrderCalculator::test_calculate_total_no_discount",
+            "tests/mutmut_test.py::TestOrderCalculator::test_calculate_shipping_free",
+            "tests/mutmut_test.py::TestOrderCalculator::test_apply_discount_invalid",
+            "tests/mutmut_test.py::TestOrderCalculator::test_remove_item_nonexistent",
+            "tests/mutmut_test.py::TestOrderCalculator::test_is_empty_true",
+            "tests/mutmut_test.py::TestOrderCalculator::test_add_item_invalid_price",
+            "tests/mutmut_test.py::TestOrderCalculator::test_list_items_empty",
+            "tests/mutmut_test.py::TestOrderCalculator::test_remove_item_existing",
+            "tests/mutmut_test.py::TestOrderCalculator::test_get_subtotal_multiple_items",
+            "tests/mutmut_test.py::TestOrderCalculator::test_is_empty_false",
+            "tests/mutmut_test.py::TestOrderCalculator::test_calculate_shipping_paid",
+            "tests/mutmut_test.py::TestOrderCalculator::test_calculate_tax_zero",
+            "tests/mutmut_test.py::TestOrderCalculator::test_clear_order",
+            "tests/mutmut_test.py::TestOrderCalculator::test_list_items_multiple",
+            "tests/mutmut_test.py::TestOrderCalculator::test_calculate_tax_positive",
+            "tests/mutmut_test.py::TestOrderCalculator::test_add_item_invalid_quantity",
+            "tests/mutmut_test.py::TestOrderCalculator::test_initial_state",
+            "tests/mutmut_test.py::TestOrderCalculator::test_apply_discount_zero"
+        ],
+        "order_calculator.x\u01c1OrderCalculator\u01c1apply_discount": [
+            "tests/mutmut_test.py::TestOrderCalculator::test_calculate_total_no_discount",
+            "tests/mutmut_test.py::TestOrderCalculator::test_apply_discount_zero",
+            "tests/mutmut_test.py::TestOrderCalculator::test_apply_discount_invalid"
+        ],
+        "order_calculator.x\u01c1OrderCalculator\u01c1calculate_shipping": [
+            "tests/mutmut_test.py::TestOrderCalculator::test_calculate_total_no_discount",
+            "tests/mutmut_test.py::TestOrderCalculator::test_calculate_shipping_paid",
+            "tests/mutmut_test.py::TestOrderCalculator::test_calculate_shipping_free"
+        ],
+        "order_calculator.x\u01c1OrderCalculator\u01c1calculate_tax": [
+            "tests/mutmut_test.py::TestOrderCalculator::test_calculate_total_no_discount",
+            "tests/mutmut_test.py::TestOrderCalculator::test_calculate_tax_zero",
+            "tests/mutmut_test.py::TestOrderCalculator::test_calculate_tax_positive"
+        ],
+        "order_calculator.x\u01c1OrderCalculator\u01c1calculate_total": [
+            "tests/mutmut_test.py::TestOrderCalculator::test_calculate_total_no_discount"
+        ],
+        "order_calculator.x\u01c1OrderCalculator\u01c1get_subtotal": [
+            "tests/mutmut_test.py::TestOrderCalculator::test_calculate_total_no_discount",
+            "tests/mutmut_test.py::TestOrderCalculator::test_get_subtotal_multiple_items"
+        ],
+        "order_calculator.x\u01c1OrderCalculator\u01c1clear_order": [
+            "tests/mutmut_test.py::TestOrderCalculator::test_clear_order"
+        ],
+        "order_calculator.x\u01c1OrderCalculator\u01c1total_items": [
+            "tests/mutmut_test.py::TestOrderCalculator::test_initial_state",
+            "tests/mutmut_test.py::TestOrderCalculator::test_clear_order",
+            "tests/mutmut_test.py::TestOrderCalculator::test_remove_item_existing"
+        ],
+        "order_calculator.x\u01c1OrderCalculator\u01c1is_empty": [
+            "tests/mutmut_test.py::TestOrderCalculator::test_is_empty_false",
+            "tests/mutmut_test.py::TestOrderCalculator::test_initial_state",
+            "tests/mutmut_test.py::TestOrderCalculator::test_clear_order",
+            "tests/mutmut_test.py::TestOrderCalculator::test_is_empty_true"
+        ],
+        "order_calculator.x\u01c1OrderCalculator\u01c1list_items": [
+            "tests/mutmut_test.py::TestOrderCalculator::test_list_items_multiple",
+            "tests/mutmut_test.py::TestOrderCalculator::test_list_items_empty"
+        ],
+        "order_calculator.x\u01c1OrderCalculator\u01c1remove_item": [
+            "tests/mutmut_test.py::TestOrderCalculator::test_remove_item_existing",
+            "tests/mutmut_test.py::TestOrderCalculator::test_remove_item_nonexistent"
+        ]
+    },
+    "duration_by_test": {
+        "tests/mutmut_test.py::TestOrderCalculator::test_add_item_invalid_price": 8.25059978524223e-05,
+        "tests/mutmut_test.py::TestOrderCalculator::test_add_item_invalid_quantity": 7.018600081210025e-05,
+        "tests/mutmut_test.py::TestOrderCalculator::test_apply_discount_invalid": 6.557100277859718e-05,
+        "tests/mutmut_test.py::TestOrderCalculator::test_apply_discount_zero": 6.150399713078514e-05,
+        "tests/mutmut_test.py::TestOrderCalculator::test_calculate_shipping_free": 0.00013645000217366032,
+        "tests/mutmut_test.py::TestOrderCalculator::test_calculate_shipping_paid": 5.9681999118765816e-05,
+        "tests/mutmut_test.py::TestOrderCalculator::test_calculate_tax_positive": 5.87030008318834e-05,
+        "tests/mutmut_test.py::TestOrderCalculator::test_calculate_tax_zero": 5.9559999499469995e-05,
+        "tests/mutmut_test.py::TestOrderCalculator::test_calculate_total_no_discount": 6.304400085355155e-05,
+        "tests/mutmut_test.py::TestOrderCalculator::test_clear_order": 0.00010827300138771534,
+        "tests/mutmut_test.py::TestOrderCalculator::test_get_subtotal_multiple_items": 6.411000140360557e-05,
+        "tests/mutmut_test.py::TestOrderCalculator::test_initial_state": 6.144899816717952e-05,
+        "tests/mutmut_test.py::TestOrderCalculator::test_is_empty_false": 5.97140024183318e-05,
+        "tests/mutmut_test.py::TestOrderCalculator::test_is_empty_true": 5.837199933012016e-05,
+        "tests/mutmut_test.py::TestOrderCalculator::test_list_items_empty": 6.66270025249105e-05,
+        "tests/mutmut_test.py::TestOrderCalculator::test_list_items_multiple": 6.153399954200722e-05,
+        "tests/mutmut_test.py::TestOrderCalculator::test_remove_item_existing": 6.039000072632916e-05,
+        "tests/mutmut_test.py::TestOrderCalculator::test_remove_item_nonexistent": 8.611700104665942e-05
+    },
+    "stats_time": 0.10580070000000003
+}

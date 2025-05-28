@@ -1,0 +1,107 @@
+{
+    "tests_by_mangled_function_name": {
+        "order_calculator.x\u01c1OrderCalculator\u01c1add_item": [
+            "tests/interface_test.py::TestOrderCalculator::test_is_empty_after_clear",
+            "tests/interface_test.py::TestOrderCalculator::test_calculate_total_invalid_discount_type",
+            "tests/interface_test.py::TestOrderCalculator::test_remove_item_existing",
+            "tests/interface_test.py::TestOrderCalculator::test_add_item_single",
+            "tests/interface_test.py::TestOrderCalculator::test_add_item_invalid_price_type",
+            "tests/interface_test.py::TestOrderCalculator::test_add_item_negative_price",
+            "tests/interface_test.py::TestOrderCalculator::test_clear_order",
+            "tests/interface_test.py::TestOrderCalculator::test_total_items_multiple",
+            "tests/interface_test.py::TestOrderCalculator::test_add_item_updates_quantity",
+            "tests/interface_test.py::TestOrderCalculator::test_calculate_total_no_discount",
+            "tests/interface_test.py::TestOrderCalculator::test_add_item_zero_quantity"
+        ],
+        "order_calculator.x\u01c1OrderCalculator\u01c1__init__": [
+            "tests/interface_test.py::TestOrderCalculator::test_add_item_negative_price",
+            "tests/interface_test.py::TestOrderCalculator::test_calculate_shipping_above_threshold",
+            "tests/interface_test.py::TestOrderCalculator::test_apply_discount_no_discount",
+            "tests/interface_test.py::TestOrderCalculator::test_remove_item_existing",
+            "tests/interface_test.py::TestOrderCalculator::test_add_item_single",
+            "tests/interface_test.py::TestOrderCalculator::test_total_items_multiple",
+            "tests/interface_test.py::TestOrderCalculator::test_apply_discount_percent",
+            "tests/interface_test.py::TestOrderCalculator::test_add_item_zero_quantity",
+            "tests/interface_test.py::TestOrderCalculator::test_is_empty_after_clear",
+            "tests/interface_test.py::TestOrderCalculator::test_calculate_total_invalid_discount_type",
+            "tests/interface_test.py::TestOrderCalculator::test_clear_order",
+            "tests/interface_test.py::TestOrderCalculator::test_apply_discount_negative",
+            "tests/interface_test.py::TestOrderCalculator::test_add_item_updates_quantity",
+            "tests/interface_test.py::TestOrderCalculator::test_calculate_total_no_discount",
+            "tests/interface_test.py::TestOrderCalculator::test_apply_discount_over_one",
+            "tests/interface_test.py::TestOrderCalculator::test_add_item_invalid_price_type",
+            "tests/interface_test.py::TestOrderCalculator::test_calculate_tax",
+            "tests/interface_test.py::TestOrderCalculator::test_calculate_shipping_at_threshold",
+            "tests/interface_test.py::TestOrderCalculator::test_calculate_shipping_below_threshold"
+        ],
+        "order_calculator.x\u01c1OrderCalculator\u01c1total_items": [
+            "tests/interface_test.py::TestOrderCalculator::test_add_item_updates_quantity",
+            "tests/interface_test.py::TestOrderCalculator::test_add_item_single",
+            "tests/interface_test.py::TestOrderCalculator::test_total_items_multiple"
+        ],
+        "order_calculator.x\u01c1OrderCalculator\u01c1is_empty": [
+            "tests/interface_test.py::TestOrderCalculator::test_is_empty_after_clear",
+            "tests/interface_test.py::TestOrderCalculator::test_clear_order",
+            "tests/interface_test.py::TestOrderCalculator::test_remove_item_existing",
+            "tests/interface_test.py::TestOrderCalculator::test_add_item_single"
+        ],
+        "order_calculator.x\u01c1OrderCalculator\u01c1get_subtotal": [
+            "tests/interface_test.py::TestOrderCalculator::test_add_item_updates_quantity",
+            "tests/interface_test.py::TestOrderCalculator::test_calculate_total_no_discount",
+            "tests/interface_test.py::TestOrderCalculator::test_add_item_single"
+        ],
+        "order_calculator.x\u01c1OrderCalculator\u01c1list_items": [
+            "tests/interface_test.py::TestOrderCalculator::test_add_item_single"
+        ],
+        "order_calculator.x\u01c1OrderCalculator\u01c1apply_discount": [
+            "tests/interface_test.py::TestOrderCalculator::test_apply_discount_over_one",
+            "tests/interface_test.py::TestOrderCalculator::test_apply_discount_no_discount",
+            "tests/interface_test.py::TestOrderCalculator::test_apply_discount_negative",
+            "tests/interface_test.py::TestOrderCalculator::test_apply_discount_percent",
+            "tests/interface_test.py::TestOrderCalculator::test_calculate_total_no_discount"
+        ],
+        "order_calculator.x\u01c1OrderCalculator\u01c1calculate_shipping": [
+            "tests/interface_test.py::TestOrderCalculator::test_calculate_shipping_below_threshold",
+            "tests/interface_test.py::TestOrderCalculator::test_calculate_shipping_at_threshold",
+            "tests/interface_test.py::TestOrderCalculator::test_calculate_total_no_discount",
+            "tests/interface_test.py::TestOrderCalculator::test_calculate_shipping_above_threshold"
+        ],
+        "order_calculator.x\u01c1OrderCalculator\u01c1calculate_tax": [
+            "tests/interface_test.py::TestOrderCalculator::test_calculate_total_no_discount",
+            "tests/interface_test.py::TestOrderCalculator::test_calculate_tax"
+        ],
+        "order_calculator.x\u01c1OrderCalculator\u01c1calculate_total": [
+            "tests/interface_test.py::TestOrderCalculator::test_calculate_total_no_discount",
+            "tests/interface_test.py::TestOrderCalculator::test_calculate_total_invalid_discount_type"
+        ],
+        "order_calculator.x\u01c1OrderCalculator\u01c1clear_order": [
+            "tests/interface_test.py::TestOrderCalculator::test_is_empty_after_clear",
+            "tests/interface_test.py::TestOrderCalculator::test_clear_order"
+        ],
+        "order_calculator.x\u01c1OrderCalculator\u01c1remove_item": [
+            "tests/interface_test.py::TestOrderCalculator::test_remove_item_existing"
+        ]
+    },
+    "duration_by_test": {
+        "tests/interface_test.py::TestOrderCalculator::test_add_item_invalid_price_type": 0.0001084830000763759,
+        "tests/interface_test.py::TestOrderCalculator::test_add_item_negative_price": 7.696700049564242e-05,
+        "tests/interface_test.py::TestOrderCalculator::test_add_item_single": 6.480999945779331e-05,
+        "tests/interface_test.py::TestOrderCalculator::test_add_item_updates_quantity": 6.28929992672056e-05,
+        "tests/interface_test.py::TestOrderCalculator::test_add_item_zero_quantity": 7.336099952226505e-05,
+        "tests/interface_test.py::TestOrderCalculator::test_apply_discount_negative": 7.371999890892766e-05,
+        "tests/interface_test.py::TestOrderCalculator::test_apply_discount_no_discount": 6.007800038787536e-05,
+        "tests/interface_test.py::TestOrderCalculator::test_apply_discount_over_one": 7.099099821061827e-05,
+        "tests/interface_test.py::TestOrderCalculator::test_apply_discount_percent": 6.718499935232103e-05,
+        "tests/interface_test.py::TestOrderCalculator::test_calculate_shipping_above_threshold": 7.048800034681335e-05,
+        "tests/interface_test.py::TestOrderCalculator::test_calculate_shipping_at_threshold": 6.929400115041062e-05,
+        "tests/interface_test.py::TestOrderCalculator::test_calculate_shipping_below_threshold": 7.034800000838004e-05,
+        "tests/interface_test.py::TestOrderCalculator::test_calculate_tax": 6.713800030411221e-05,
+        "tests/interface_test.py::TestOrderCalculator::test_calculate_total_invalid_discount_type": 6.859800123493187e-05,
+        "tests/interface_test.py::TestOrderCalculator::test_calculate_total_no_discount": 6.550300167873502e-05,
+        "tests/interface_test.py::TestOrderCalculator::test_clear_order": 7.047799954307266e-05,
+        "tests/interface_test.py::TestOrderCalculator::test_is_empty_after_clear": 6.239899812499061e-05,
+        "tests/interface_test.py::TestOrderCalculator::test_remove_item_existing": 6.353000208036974e-05,
+        "tests/interface_test.py::TestOrderCalculator::test_total_items_multiple": 9.642100121709518e-05
+    },
+    "stats_time": 0.16397680000000003
+}

@@ -7,6 +7,8 @@
 - partial: 1
 - coverage: 99%
 
+## mutmut.py
+
 ## Ogólne informacje
 
 Liczba wszystkich własnych scenariuszy: 54
