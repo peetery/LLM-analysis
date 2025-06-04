@@ -8,6 +8,12 @@
 - coverage: 99%
 
 ## mutmut.py
+⠇ 217/217  🎉 128 🫥 0  ⏰ 0  🤔 0  🙁 89  🔇 0
+
+## Rezultaty
+- Statement coverage: 99%
+- Branch coverage: 98%
+- Mutation score: 59%
 
 ## Ogólne informacje
 

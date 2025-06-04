@@ -5,10 +5,14 @@
 ## coverage.py
 - missing: 11
 - partial: 11
-- coverage: 85%
 
 ## mutmut.py
 ⠇ 217/217  🎉 89 🫥 0  ⏰ 0  🤔 0  🙁 128  🔇 0
+
+## Rezultaty
+- Statement coverage: 85%
+- Branch coverage: 80%
+- Mutation score: 41%
 
 ## Ogólne informacje
 

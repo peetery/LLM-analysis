@@ -10,6 +10,11 @@
 ## mutmut.py
 ⠼ 217/217  🎉 79 🫥 18  ⏰ 0  🤔 0  🙁 120  🔇 0
 
+## Rezultaty
+- Statement coverage: 76%
+- Branch coverage: 68%
+- Mutation score: 36%
+
 ## Ogólne informacje
 
 Liczba wszystkich własnych scenariuszy: 54
