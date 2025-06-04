@@ -11,6 +11,7 @@
 ⠧ 217/217  🎉 109 🫥 0  ⏰ 0  🤔 0  🙁 108  🔇 0
 
 ## Rezultaty
+- Compilation success rate: 100%
 - Statement coverage: 99%
 - Branch coverage: 98%
 - Mutation score: 50%
@@ -20,7 +21,7 @@
 Liczba wszystkich własnych scenariuszy: 54
 
 - Testy wygenerowane przez LLM: 56
-- Testy zakończone powodzeniem: 46
+- Testy zakończone powodzeniem: 56
 - Testy zakończone niepowodzeniem: 0
 
 

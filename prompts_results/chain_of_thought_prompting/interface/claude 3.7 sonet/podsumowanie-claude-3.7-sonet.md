@@ -11,6 +11,7 @@
 ⠋ 217/217  🎉 94 🫥 0  ⏰ 0  🤔 0  🙁 123  🔇 0
 
 ## Rezultaty
+- Compilation success rate: 68%
 - Statement coverage: 87%
 - Branch coverage: 82%
 - Mutation score: 43%
