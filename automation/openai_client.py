@@ -34,23 +34,37 @@ class OpenAIClient(BaseLLMClient):
         }
     
     def login(self):
-        """Logowanie do ChatGPT - wymaga manualnego zalogowania"""
+        """Logowanie do ChatGPT z weryfikacją modelu"""
         logger.info("Navigating to ChatGPT...")
-        self.driver.get(self.base_url)
         
         # Sprawdź czy już zalogowany
         try:
             self.wait_for_element(self.get_selectors()['input_box'], timeout=5)
             logger.info("Already logged in!")
-            return True
+            
+            # Weryfikuj czy właściwy model jest wybrany
+            if self.verify_and_ensure_model():
+                return True
+            else:
+                logger.warning("Model verification failed, but continuing...")
+                return True
+                
         except:
-            logger.warning("Please log in manually and press Enter to continue...")
-            input("Press Enter after login...")
-            return True
+            logger.error("❌ NOT LOGGED IN! Please ensure you are logged into ChatGPT before running automation.")
+            logger.error("❌ Open Chrome, go to https://chatgpt.com, log in, then run automation.")
+            return False
     
     def send_prompt(self, prompt_text, wait_for_completion=True):
-        """Send prompt to ChatGPT"""
+        """Send prompt to ChatGPT with model verification"""
         selectors = self.get_selectors()
+        
+        # KLUCZOWE: Sprawdź model przed wysłaniem promptu
+        logger.info(f"🔍 Verifying model before sending prompt...")
+        if not self.verify_and_ensure_model():
+            logger.warning("⚠️  Model verification failed, but continuing with prompt")
+        
+        # Sprawdź czy nie ma alertów/popupów
+        self.handle_popups_and_alerts()
         
         try:
             # Find text input (ProseMirror contenteditable div)
@@ -149,6 +163,13 @@ class OpenAIClient(BaseLLMClient):
                     time.sleep(3)
                     continue
                 
+                # Also check for Canvas generation indicators
+                canvas_loading = self.driver.find_elements(By.CSS_SELECTOR, '.canvas-loading, .canvas .loading, .canvas .generating')
+                if canvas_loading and any(elem.is_displayed() for elem in canvas_loading):
+                    logger.debug("Canvas is still generating...")
+                    time.sleep(3)
+                    continue
+                
                 # Secondary check: send button disabled
                 send_buttons = self.driver.find_elements(By.CSS_SELECTOR, selectors['send_button'])
                 if send_buttons:
@@ -160,28 +181,133 @@ class OpenAIClient(BaseLLMClient):
                         time.sleep(3)
                         continue
                 
-                # Get response with multiple selectors
+                # Get response from BOTH normal chat AND Canvas
                 response_text = None
-                response_selectors = [
-                    '[data-message-author-role="assistant"]',
-                    '[data-testid="conversation-turn"]:last-child [data-message-author-role="assistant"]',
-                    '.markdown',
-                    '[role="article"]'
+                
+                # Try Canvas first (if present, it usually contains the main response)
+                logger.debug("Searching for Canvas response...")
+                canvas_selectors = [
+                    # Direct Canvas content
+                    '.canvas-content', '[data-testid="canvas-content"]', 
+                    '.canvas-editor', '.canvas .code-block',
+                    '.canvas pre', '.canvas code',
+                    
+                    # Alternative Canvas patterns
+                    '[class*="canvas"] pre', '[class*="canvas"] code',
+                    '[class*="Canvas"] pre', '[class*="Canvas"] code',
+                    
+                    # IFrame content (if Canvas is in iframe)
+                    'iframe', 
+                    
+                    # Monaco Editor (common code editor)
+                    '.monaco-editor', '.monaco-editor .view-lines',
+                    
+                    # General code editors
+                    '.code-editor', '.editor-content',
+                    '[role="textbox"][contenteditable]',
+                    
+                    # Text areas that might contain code
+                    'textarea', '[contenteditable="true"]'
                 ]
                 
-                for selector in response_selectors:
+                for selector in canvas_selectors:
                     try:
                         elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
                         if elements:
-                            last_element = elements[-1]
-                            text = last_element.text.strip()
-                            if text and len(text) > len(response_text or ""):
-                                response_text = text
+                            for element in elements:
+                                text = element.text.strip()
+                                # IMPORTANT: Skip our own prompt! Look for test code specifically
+                                if (text and len(text) > 1000 and  # Zmniejszona minimalna długość
+                                    ('import unittest' in text or 'class Test' in text or 'def test_' in text) and
+                                    'Generate a complete Python unit test suite' not in text):  # Skip our prompt
+                                    response_text = text
+                                    logger.info(f"✓ Found response in Canvas: {len(text)} chars")
+                                    break
+                            if response_text:
+                                break
                     except:
                         continue
                 
+                # If not found in Canvas, try normal chat selectors
+                if not response_text:
+                    logger.debug("Canvas not found, searching normal chat...")
+                    chat_selectors = [
+                        '[data-message-author-role="assistant"]',
+                        '[data-testid="conversation-turn"]:last-child [data-message-author-role="assistant"]',
+                        '.markdown',
+                        '[role="article"]',
+                        '.message-content'
+                    ]
+                    
+                    for selector in chat_selectors:
+                        try:
+                            elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
+                            if elements:
+                                last_element = elements[-1]
+                                text = last_element.text.strip()
+                                # Skip our prompt and look for actual response
+                                if (text and len(text) > len(response_text or "") and 
+                                    'Generate a complete Python unit test suite' not in text and
+                                    len(text) > 500):  # Response should be substantial
+                                    response_text = text
+                                    logger.info(f"✓ Found response in chat: {len(text)} chars")
+                        except:
+                            continue
+                
+                # Fallback: Use JavaScript to find any text that looks like code (only if nothing found)
+                if not response_text:
+                    logger.debug("No response found via selectors, trying JavaScript...")
+                    try:
+                        js_response = self.driver.execute_script("""
+                            // More aggressive search for Python code
+                            var keywords = ['import unittest', 'class Test', 'def test_', 'unittest.TestCase', 'import ', 'from ', 'class ', 'def '];
+                            var allElements = Array.from(document.querySelectorAll('*'));
+                            var bestMatch = '';
+                            var bestScore = 0;
+                            
+                            for (var elem of allElements) {
+                                var text = elem.textContent || elem.innerText || elem.value || '';
+                                // Skip our prompt and look for substantial test code
+                                if (text.length > 2000 && 
+                                    !text.includes('Generate a complete Python unit test suite')) {
+                                    var score = 0;
+                                    for (var keyword of keywords) {
+                                        if (text.includes(keyword)) {
+                                            score += keyword.length;
+                                        }
+                                    }
+                                    if (score > bestScore) {
+                                        bestScore = score;
+                                        bestMatch = text;
+                                    }
+                                }
+                            }
+                            
+                            return bestMatch || null;
+                        """)
+                        
+                        if js_response and len(js_response) > len(response_text or ""):
+                            response_text = js_response
+                            logger.info(f"✓ Found response via JavaScript: {len(js_response)} chars")
+                    except Exception as e:
+                        logger.debug(f"JavaScript fallback failed: {e}")
+                
                 if response_text:
                     current_length = len(response_text)
+                    
+                    # For responses > 100k chars, we probably found the whole page content
+                    # This is likely the Canvas content we want!
+                    if current_length > 100000:
+                        logger.info(f"Large response detected ({current_length} chars) - likely Canvas content")
+                        self.response_time = time.time() - start_time
+                        return response_text
+                    
+                    # For Canvas responses (substantial code), return immediately
+                    if current_length > 3000 and ('import unittest' in response_text or 'class Test' in response_text):
+                        logger.info(f"Canvas code response detected ({current_length} chars)")
+                        self.response_time = time.time() - start_time
+                        return response_text
+                    
                     logger.debug(f"Current response length: {current_length} chars")
                     
                     # For short responses, wait longer to ensure completion
@@ -217,7 +343,9 @@ class OpenAIClient(BaseLLMClient):
         return None
     
     def start_new_chat(self):
-        """Start new chat"""
+        """Start new chat with model verification"""
+        logger.info("🆕 Starting new chat...")
+        
         # Try multiple selectors for new chat
         new_chat_selectors = [
             'button[aria-label="New chat"]',
@@ -236,6 +364,12 @@ class OpenAIClient(BaseLLMClient):
                             element.click()
                             time.sleep(2)
                             logger.info(f"New chat started with selector: {selector}")
+                            
+                            # Po rozpoczęciu nowego chatu, sprawdź model
+                            time.sleep(2)  # Daj czas na załadowanie
+                            if not self.verify_and_ensure_model():
+                                logger.warning("⚠️  Model verification failed after new chat")
+                            
                             return True
                     except:
                         continue
@@ -249,6 +383,11 @@ class OpenAIClient(BaseLLMClient):
                 self.driver.get("https://chatgpt.com/")
                 time.sleep(3)
                 logger.info("Started new chat by navigating to home")
+                
+                # Po nawigacji, sprawdź model
+                if not self.verify_and_ensure_model():
+                    logger.warning("⚠️  Model verification failed after navigation")
+                
                 return True
         except:
             pass
@@ -259,40 +398,495 @@ class OpenAIClient(BaseLLMClient):
     def select_model(self, model_name):
         """Select specific GPT model if available"""
         try:
+            logger.info(f"Attempting to select model: {model_name}")
+            
+            # For GPT-4.5, we need to look for "More models" or similar
+            if "4.5" in model_name:
+                # First try to find "More models" button or similar
+                more_buttons = [
+                    'button:contains("More")',
+                    'button[aria-label*="More"]',
+                    'button:has-text("More")',
+                    '[data-testid="more-models"]'
+                ]
+                
+                for selector in more_buttons:
+                    try:
+                        # Use JavaScript to find buttons with "More" text
+                        elements = self.driver.execute_script("""
+                            return Array.from(document.querySelectorAll('button')).filter(
+                                btn => btn.textContent.toLowerCase().includes('more')
+                            );
+                        """)
+                        
+                        if elements:
+                            elements[0].click()
+                            time.sleep(3)
+                            logger.info("Clicked 'More models' button")
+                            break
+                    except:
+                        continue
+            
             # Try to find and click model selector
             model_selectors = [
                 '[data-testid="model-switcher"]',
                 'button[aria-haspopup="menu"]',
-                'button:has(span:contains("GPT"))',
-                '.model-selector'
+                '.model-selector',
+                'button:has(svg)',
+                '[role="button"]:has-text("GPT")'
+            ]
+            
+            for selector in model_selectors:
+                try:
+                    # Try CSS selector first
+                    elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
+                    if not elements:
+                        # Try finding buttons with GPT text using JavaScript
+                        elements = self.driver.execute_script("""
+                            return Array.from(document.querySelectorAll('button, [role="button"]')).filter(
+                                btn => btn.textContent.toLowerCase().includes('gpt') || 
+                                       btn.getAttribute('aria-label')?.toLowerCase().includes('model')
+                            );
+                        """)
+                    
+                    for element in elements:
+                        if element.is_displayed() and element.is_enabled():
+                            element.click()
+                            time.sleep(3)
+                            logger.info("Clicked model selector")
+                            
+                            # Look for specific model option with JavaScript
+                            model_found = self.driver.execute_script("""
+                                var modelName = arguments[0];
+                                var options = Array.from(document.querySelectorAll('[role="menuitem"], [role="option"], button, a'));
+                                
+                                for (var option of options) {
+                                    var text = option.textContent.toLowerCase();
+                                    if (text.includes('4.5') || text.includes('gpt-4.5')) {
+                                        option.click();
+                                        return true;
+                                    }
+                                }
+                                return false;
+                            """, model_name)
+                            
+                            if model_found:
+                                time.sleep(2)
+                                logger.info(f"✓ Selected model: {model_name}")
+                                return True
+                            break
+                except Exception as e:
+                    logger.debug(f"Selector {selector} failed: {e}")
+                    continue
+            
+            logger.warning(f"Could not select specific model {model_name}, using default")
+            return True  # Continue anyway
+            
+        except Exception as e:
+            logger.warning(f"Model selection failed: {e}")
+            return True  # Continue anyway
+    
+    def verify_and_ensure_model(self):
+        """Weryfikuje czy właściwy model jest wybrany i wymusza go AUTOMATYCZNIE"""
+        try:
+            # Sprawdź aktualnie wybrany model
+            current_model = self.get_current_model()
+            target_model = self.get_target_model_name()
+            
+            logger.info(f"🔍 Current model: {current_model}, Target: {target_model}")
+            
+            if self.is_correct_model(current_model, target_model):
+                logger.info(f"✅ Correct model already selected: {current_model}")
+                return True
+            else:
+                logger.warning(f"🔄 AUTO-SWITCHING: Current: {current_model} → Target: {target_model}")
+                
+                # AUTOMATYCZNIE wymuś właściwy model
+                success = self.force_model_selection()
+                if success:
+                    # Sprawdź ponownie
+                    new_model = self.get_current_model()
+                    if self.is_correct_model(new_model, target_model):
+                        logger.info(f"✅ AUTO-SWITCH SUCCESS: {new_model}")
+                        return True
+                    else:
+                        logger.error(f"❌ AUTO-SWITCH FAILED: Still {new_model}, expected {target_model}")
+                        return False
+                else:
+                    logger.error(f"❌ AUTO-SWITCH FAILED: Could not change model")
+                    return False
+                
+        except Exception as e:
+            logger.warning(f"Model verification error: {e}")
+            return False
+    
+    def get_current_model(self):
+        """Wykrywa aktualnie wybrany model ChatGPT"""
+        try:
+            # Szukaj różnych selektorów dla nazwy modelu
+            model_selectors = [
+                '[data-testid="model-switcher"] span',
+                'button[aria-haspopup="menu"] span',
+                '.model-name',
+                'button:contains("GPT")',
+                '[role="button"] span'
             ]
             
             for selector in model_selectors:
                 try:
                     elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
                     for element in elements:
-                        if element.is_displayed() and element.is_enabled():
-                            element.click()
-                            time.sleep(2)
-                            
-                            # Look for specific model option
-                            model_options = self.driver.find_elements(By.CSS_SELECTOR, '[role="menuitem"], [role="option"]')
-                            for option in model_options:
-                                if model_name.lower() in option.text.lower() or "gpt-4" in option.text.lower():
-                                    option.click()
-                                    time.sleep(1)
-                                    logger.info(f"Selected model: {model_name}")
-                                    return True
-                            break
+                        text = element.text.strip().lower()
+                        if any(model in text for model in ['gpt', 'o1', 'o3', '4o', '4.5']):
+                            return text
                 except:
                     continue
             
-            logger.info(f"Could not select specific model {model_name}, using default")
-            return True  # Continue anyway
+            # Fallback - użyj JavaScript do znalezienia tekstu modelu
+            model_text = self.driver.execute_script("""
+                // Szukaj wszystkich elementów z tekstem zawierającym nazwy modeli
+                var allElements = Array.from(document.querySelectorAll('*'));
+                var modelKeywords = ['gpt-4.5', 'gpt-4o', 'gpt-o3', 'gpt o3', 'o3', '4.5', '4o-mini'];
+                
+                for (var elem of allElements) {
+                    var text = elem.textContent || elem.innerText || '';
+                    var lowerText = text.toLowerCase().trim();
+                    
+                    // Sprawdź czy element jest widoczny i ma rozsądną długość
+                    if (elem.offsetParent && text.length < 50) {
+                        for (var keyword of modelKeywords) {
+                            if (lowerText.includes(keyword) && 
+                                !lowerText.includes('select') && 
+                                !lowerText.includes('choose')) {
+                                return lowerText;
+                            }
+                        }
+                    }
+                }
+                
+                // Sprawdź URL - może zawierać informację o modelu
+                var url = window.location.href;
+                if (url.includes('model=')) {
+                    var match = url.match(/model=([^&]+)/);
+                    if (match) return match[1];
+                }
+                
+                return null;
+            """)
+            
+            if model_text:
+                return model_text.lower().strip()
+                
+            return "unknown"
             
         except Exception as e:
-            logger.warning(f"Model selection failed: {e}")
-            return True  # Continue anyway
+            logger.debug(f"Error getting current model: {e}")
+            return "unknown"
+    
+    def get_target_model_name(self):
+        """Zwraca oczekiwaną nazwę modelu na podstawie self.model_name"""
+        model_mapping = {
+            'gpt-4.5': ['4.5', 'gpt-4.5', 'gpt 4.5'],
+            'gpt-o3': ['o3', 'gpt-o3', 'gpt o3'],
+            'gpt-o4-mini-high': ['4o-mini', 'gpt-4o-mini', '4o mini']
+        }
+        
+        return model_mapping.get(self.model_name, [self.model_name])
+    
+    def is_correct_model(self, current_model, target_variants):
+        """Sprawdza czy aktualny model pasuje do oczekiwanego"""
+        if not current_model or current_model == "unknown":
+            return False
+            
+        current_lower = current_model.lower()
+        
+        # Sprawdź czy któryś z wariantów target jest w current_model
+        for variant in target_variants:
+            if variant.lower() in current_lower:
+                return True
+                
+        return False
+    
+    def force_model_selection(self):
+        """Wymusza wybór właściwego modelu - PEŁEN AUTOMAT"""
+        try:
+            logger.info(f"🔄 AUTO-FORCING model selection to: {self.model_name}")
+            
+            # METODA 1: Refresh strony z odpowiednim URL (2 próby z różnymi wariantami)
+            model_urls = [
+                {
+                    'gpt-4.5': 'https://chatgpt.com/?model=gpt-4.5',
+                    'gpt-o3': 'https://chatgpt.com/?model=o3', 
+                    'gpt-o4-mini-high': 'https://chatgpt.com/?model=gpt-4o-mini'
+                },
+                {
+                    'gpt-4.5': 'https://chatgpt.com/?model=gpt4.5',
+                    'gpt-o3': 'https://chatgpt.com/?model=gpt-o3',
+                    'gpt-o4-mini-high': 'https://chatgpt.com/?model=4o-mini'
+                },
+                {
+                    'gpt-4.5': 'https://chatgpt.com/?model=4.5',
+                    'gpt-o3': 'https://chatgpt.com/?model=o3-preview',
+                    'gpt-o4-mini-high': 'https://chatgpt.com/?model=mini'
+                }
+            ]
+            
+            for i, urls in enumerate(model_urls):
+                target_url = urls.get(self.model_name)
+                if target_url:
+                    logger.info(f"🔗 AUTO-TRY #{i+1}: {target_url}")
+                    self.driver.get(target_url)
+                    time.sleep(7)  # Dłużej czekaj
+                    
+                    # Obsłuż popupy które mogą się pojawić
+                    self.handle_popups_and_alerts()
+                    
+                    # Sprawdź czy się udało
+                    new_model = self.get_current_model()
+                    logger.info(f"🔍 After URL #{i+1}: detected model = {new_model}")
+                    
+                    if self.is_correct_model(new_model, self.get_target_model_name()):
+                        logger.info(f"✅ AUTO-SUCCESS via URL #{i+1}: {new_model}")
+                        return True
+            
+            # METODA 2: Próby automatycznego klikania w interface
+            logger.info("🖱️ AUTO-TRYING interface selection...")
+            if self.select_model_via_interface():
+                return True
+            
+            # METODA 3: Force poprzez JavaScript
+            logger.info("🔧 AUTO-TRYING JavaScript selection...")
+            if self.select_model_with_javascript():
+                return True
+                
+            # OSTATNIA PRÓBA: Nawiguj do głównej i spróbuj ponownie
+            logger.warning("🔄 LAST AUTO-ATTEMPT: Navigate to home and retry...")
+            self.driver.get("https://chatgpt.com/")
+            time.sleep(5)
+            self.handle_popups_and_alerts()
+            
+            # Sprawdź model po nawigacji do home
+            final_model = self.get_current_model()
+            if self.is_correct_model(final_model, self.get_target_model_name()):
+                logger.info(f"✅ AUTO-SUCCESS via home navigation: {final_model}")
+                return True
+            
+            logger.error(f"❌ ALL AUTO-METHODS FAILED. Final model: {final_model}")
+            return False
+            
+        except Exception as e:
+            logger.error(f"Auto force model selection failed: {e}")
+            return False
+    
+    def select_model_via_interface(self):
+        """Automatyczny wybór modelu przez interfejs"""
+        try:
+            # Szukaj przycisku zmiany modelu
+            model_switcher_selectors = [
+                '[data-testid="model-switcher"]',
+                'button[aria-haspopup="menu"]',
+                'button:has(span:contains("GPT"))',
+                '.model-selector',
+                '[role="button"]:contains("GPT")'
+            ]
+            
+            for selector in model_switcher_selectors:
+                try:
+                    # Znajdź i kliknij przełącznik modelu
+                    switcher = self.driver.find_element(By.CSS_SELECTOR, selector)
+                    if switcher.is_displayed() and switcher.is_enabled():
+                        switcher.click()
+                        time.sleep(3)
+                        logger.info(f"🖱️ Clicked model switcher: {selector}")
+                        
+                        # Teraz szukaj konkretnego modelu w menu
+                        if self.select_model_from_dropdown():
+                            return True
+                            
+                except Exception as e:
+                    logger.debug(f"Switcher selector failed: {selector} - {e}")
+                    continue
+            
+            # Fallback - użyj JavaScript
+            logger.info("🔍 Trying JavaScript model selection...")
+            return self.select_model_with_javascript()
+            
+        except Exception as e:
+            logger.error(f"Manual model selection failed: {e}")
+            return False
+    
+    def select_model_from_dropdown(self):
+        """Wybiera model z rozwiniętego menu"""
+        try:
+            target_variants = self.get_target_model_name()
+            
+            # Szukaj opcji w menu
+            option_selectors = [
+                '[role="menuitem"]',
+                '[role="option"]', 
+                'button',
+                'a',
+                '.menu-item',
+                'li'
+            ]
+            
+            for selector in option_selectors:
+                elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
+                for element in elements:
+                    try:
+                        text = element.text.strip().lower()
+                        if text and any(variant.lower() in text for variant in target_variants):
+                            if element.is_displayed() and element.is_enabled():
+                                element.click()
+                                time.sleep(2)
+                                logger.info(f"✅ Selected model from dropdown: {text}")
+                                return True
+                    except:
+                        continue
+                        
+            return False
+            
+        except Exception as e:
+            logger.debug(f"Dropdown selection failed: {e}")
+            return False
+    
+    def select_model_with_javascript(self):
+        """Ostatnia szansa - wybór modelu przez JavaScript"""
+        try:
+            target_variants = self.get_target_model_name()
+            
+            success = self.driver.execute_script("""
+                var targetVariants = arguments[0];
+                var allElements = Array.from(document.querySelectorAll('button, [role="menuitem"], [role="option"], a'));
+                
+                for (var element of allElements) {
+                    var text = (element.textContent || element.innerText || '').toLowerCase().trim();
+                    
+                    for (var variant of targetVariants) {
+                        if (text.includes(variant.toLowerCase()) && 
+                            element.offsetParent && // element is visible
+                            !element.disabled) {
+                            
+                            try {
+                                element.click();
+                                return true;
+                            } catch (e) {
+                                // Try different click methods
+                                try {
+                                    element.dispatchEvent(new MouseEvent('click', {bubbles: true}));
+                                    return true;
+                                } catch (e2) {
+                                    continue;
+                                }
+                            }
+                        }
+                    }
+                }
+                return false;
+            """, target_variants)
+            
+            if success:
+                time.sleep(3)
+                logger.info("✅ Model selected via JavaScript")
+                return True
+            else:
+                logger.warning("❌ JavaScript model selection failed")
+                return False
+                
+        except Exception as e:
+            logger.error(f"JavaScript model selection error: {e}")
+            return False
+    
+    def handle_popups_and_alerts(self):
+        """Obsługuje popupy i alerty które mogą się pojawiać w ChatGPT"""
+        try:
+            # Sprawdź JavaScript alerty
+            try:
+                alert = self.driver.switch_to.alert
+                logger.warning(f"🚨 JavaScript alert detected: {alert.text}")
+                alert.accept()
+                time.sleep(1)
+            except:
+                pass  # Brak alertu
+            
+            # Sprawdź modalne okna dialogowe
+            modal_selectors = [
+                '[role="dialog"]',
+                '.modal',
+                '.popup',
+                '[data-testid="modal"]',
+                '.overlay'
+            ]
+            
+            for selector in modal_selectors:
+                try:
+                    modals = self.driver.find_elements(By.CSS_SELECTOR, selector)
+                    for modal in modals:
+                        if modal.is_displayed():
+                            logger.warning(f"🔲 Modal detected: {selector}")
+                            
+                            # Spróbuj znaleźć przycisk zamknięcia
+                            close_selectors = [
+                                'button:contains("Close")',
+                                'button:contains("OK")', 
+                                'button:contains("Accept")',
+                                'button:contains("Continue")',
+                                '[aria-label="Close"]',
+                                '.close-button',
+                                'button[data-testid="close"]'
+                            ]
+                            
+                            for close_selector in close_selectors:
+                                try:
+                                    close_btn = modal.find_element(By.CSS_SELECTOR, close_selector)
+                                    if close_btn.is_displayed() and close_btn.is_enabled():
+                                        close_btn.click()
+                                        logger.info(f"✓ Closed modal with: {close_selector}")
+                                        time.sleep(1)
+                                        return
+                                except:
+                                    continue
+                            
+                            # Jeśli nie znaleziono przycisku, spróbuj kliknąć poza modal
+                            try:
+                                self.driver.execute_script("arguments[0].click();", modal)
+                                time.sleep(1)
+                            except:
+                                pass
+                                
+                except:
+                    continue
+                    
+            # Sprawdź notyfikacje o zmianie modelu
+            notification_selectors = [
+                '.notification',
+                '[role="status"]',
+                '.toast',
+                '.banner',
+                '[data-testid="notification"]'
+            ]
+            
+            for selector in notification_selectors:
+                try:
+                    notifications = self.driver.find_elements(By.CSS_SELECTOR, selector)
+                    for notification in notifications:
+                        if notification.is_displayed():
+                            text = notification.text.lower()
+                            if any(keyword in text for keyword in ['model', 'switched', 'changed', 'unavailable']):
+                                logger.warning(f"📢 Model change notification: {text[:100]}...")
+                                
+                                # Spróbuj zamknąć notyfikację
+                                try:
+                                    close_btn = notification.find_element(By.CSS_SELECTOR, 'button, [role="button"]')
+                                    close_btn.click()
+                                    time.sleep(1)
+                                except:
+                                    pass
+                except:
+                    continue
+                    
+        except Exception as e:
+            logger.debug(f"Error handling popups: {e}")
     
     def extract_code_from_response(self, response_text):
         """Extract Python code from response, cleaning ChatGPT UI artifacts"""
