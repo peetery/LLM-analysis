@@ -1,0 +1,66 @@
+{
+  "headless": false,
+  "delay_between_experiments": 15,
+  "experiments": [
+    {
+      "model": "gpt-4.5",
+      "strategy": "simple_prompting",
+      "context": "interface"
+    },
+    {
+      "model": "gpt-4.5",
+      "strategy": "simple_prompting", 
+      "context": "interface_docstring"
+    },
+    {
+      "model": "gpt-4.5",
+      "strategy": "simple_prompting",
+      "context": "full_context"
+    },
+    {
+      "model": "gpt-4.5",
+      "strategy": "chain_of_thought_prompting",
+      "context": "interface"
+    },
+    {
+      "model": "gpt-4.5",
+      "strategy": "chain_of_thought_prompting",
+      "context": "interface_docstring"
+    },
+    {
+      "model": "gpt-4.5",
+      "strategy": "chain_of_thought_prompting",
+      "context": "full_context"
+    },
+    {
+      "model": "claude-3.7-sonnet",
+      "strategy": "simple_prompting",
+      "context": "interface"
+    },
+    {
+      "model": "claude-3.7-sonnet",
+      "strategy": "simple_prompting",
+      "context": "interface_docstring"
+    },
+    {
+      "model": "claude-3.7-sonnet",
+      "strategy": "simple_prompting",
+      "context": "full_context"
+    },
+    {
+      "model": "claude-3.7-sonnet",
+      "strategy": "chain_of_thought_prompting",
+      "context": "interface"
+    },
+    {
+      "model": "claude-3.7-sonnet",
+      "strategy": "chain_of_thought_prompting",
+      "context": "interface_docstring"
+    },
+    {
+      "model": "claude-3.7-sonnet",
+      "strategy": "chain_of_thought_prompting",
+      "context": "full_context"
+    }
+  ]
+}

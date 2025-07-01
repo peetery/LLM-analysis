@@ -1,0 +1,12 @@
+{
+  "compilation_success": true,
+  "coverage": null,
+  "mutation": {
+    "total_mutants": 0,
+    "killed": 0,
+    "survived": 0,
+    "timeout": 0,
+    "mutation_score": 0
+  },
+  "scenarios": null
+}
