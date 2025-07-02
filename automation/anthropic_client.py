@@ -12,11 +12,13 @@ logger = logging.getLogger(__name__)
 class AnthropicClient(BaseLLMClient):
     """Automatyzacja Claude"""
     
-    def __init__(self, model_name="claude-3.7-sonnet", headless=True, use_profile=True):
+    def __init__(self, model_name="claude-3.7-sonnet", headless=True, use_profile=True, attach_to_existing=False, debug_port=9222):
         self.model_name = model_name
         self.base_url = "https://claude.ai"
         self.use_profile = use_profile
         self.profile_name = "claude"
+        self.attach_to_existing = attach_to_existing
+        self.debug_port = debug_port
         super().__init__(headless)
     
     def get_selectors(self):
@@ -49,6 +51,7 @@ class AnthropicClient(BaseLLMClient):
     def send_prompt(self, prompt_text, wait_for_completion=True):
         """Wysłanie promptu do Claude"""
         selectors = self.get_selectors()
+        start_time = time.time()  # Start timing
         
         try:
             # Znajdź pole tekstowe (contenteditable div)
@@ -62,14 +65,31 @@ class AnthropicClient(BaseLLMClient):
             time.sleep(1)
             send_button = self.wait_for_clickable(selectors['send_button'])
             send_button.click()
+            logger.info("Prompt sent to Claude")
+            
+            # Verify message was sent by checking if send button is disabled/hidden
+            time.sleep(1)
+            try:
+                is_still_clickable = send_button.is_enabled() and send_button.is_displayed()
+                if is_still_clickable:
+                    logger.warning("⚠️  Send button still clickable - message may not have been sent!")
+                else:
+                    logger.info("✅ Message sending verified - send button disabled/hidden")
+            except:
+                logger.info("✅ Send button state changed - likely sent")
             
             if wait_for_completion:
-                return self.wait_for_response()
+                response = self.wait_for_response()
+                # Calculate and store response time
+                self.last_response_time = time.time() - start_time
+                logger.info(f"🕒 Total response time: {self.last_response_time:.2f}s")
+                return response
             
             return True
             
         except Exception as e:
             logger.error(f"Failed to send prompt: {e}")
+            self.last_response_time = 0
             return None
     
     def wait_for_response(self, max_wait_time=120):

@@ -1,0 +1,76 @@
+{
+  "compilation": {
+    "compilation_success": true,
+    "execution_success": false,
+    "tests_run": 45,
+    "tests_passed": 30,
+    "tests_failed": 15,
+    "test_errors": [],
+    "compilation_errors": []
+  },
+  "coverage": null,
+  "mutation": {
+    "total_mutants": 0,
+    "killed": 0,
+    "survived": 0,
+    "timeout": 0,
+    "suspicious": 0,
+    "skipped": 0,
+    "mutation_score": 0.0
+  },
+  "scenarios": {
+    "total_test_methods": 45,
+    "covered_scenarios": {
+      "init_scenarios": 5,
+      "add_item_scenarios": 7,
+      "remove_item_scenarios": 1,
+      "get_subtotal_scenarios": 6,
+      "apply_discount_scenarios": 7,
+      "calculate_shipping_scenarios": 3,
+      "calculate_tax_scenarios": 3,
+      "calculate_total_scenarios": 3,
+      "total_items_scenarios": 2,
+      "list_items_scenarios": 2,
+      "is_empty_scenarios": 2,
+      "clear_order_scenarios": 2,
+      "corner_cases": 18,
+      "performance_tests": 1,
+      "precision_tests": 1
+    },
+    "quality_metrics": {
+      "has_setup_teardown": false,
+      "uses_assertions": 49,
+      "tests_with_multiple_assertions": 4,
+      "uses_context_managers": 12,
+      "has_edge_case_testing": false,
+      "has_error_testing": 12,
+      "average_test_length": 5.222222222222222
+    },
+    "scenarios_file_found": true,
+    "total_defined_scenarios": 54
+  },
+  "summary": {
+    "model": "o3",
+    "strategy": "chain_of_thought_prompting",
+    "context_type": "interface",
+    "timestamp": "2025-07-03T01:04:04.063403",
+    "response_time": 110.581618309021,
+    "compilation_success_rate": 100,
+    "execution_success_rate": 0,
+    "tests_generated": 45,
+    "tests_passed": 30,
+    "tests_failed": 15,
+    "test_success_rate": 66.7,
+    "mutation_score": 0.0,
+    "mutants_killed": 0,
+    "mutants_survived": 0,
+    "total_mutants": 0,
+    "total_test_methods": 45,
+    "covered_scenarios_count": 63,
+    "total_defined_scenarios": 54,
+    "scenario_coverage_rate": 116.7,
+    "total_assertions": 49,
+    "tests_with_error_handling": 12,
+    "average_test_length": 5.2
+  }
+}

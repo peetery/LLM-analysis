@@ -57,6 +57,7 @@ class OpenAIClient(BaseLLMClient):
     def send_prompt(self, prompt_text, wait_for_completion=True):
         """Send prompt to ChatGPT with model verification"""
         selectors = self.get_selectors()
+        start_time = time.time()  # Start timing from here
         
         # KLUCZOWE: Sprawdź model przed wysłaniem promptu
         logger.info(f"🔍 Verifying model before sending prompt...")
@@ -125,14 +126,62 @@ class OpenAIClient(BaseLLMClient):
                     logger.debug(f"Selector {selector} failed: {e}")
             
             if send_button:
-                send_button.click()
-                logger.info("Prompt sent via send button click")
+                # Try to send with retry if button stays enabled
+                max_attempts = 3
+                sent_successfully = False
+                
+                for attempt in range(max_attempts):
+                    send_button.click()
+                    logger.info(f"Prompt send attempt {attempt + 1}/{max_attempts}")
+                    
+                    # Wait and verify that message was sent
+                    time.sleep(2)
+                    try:
+                        # Re-find send button to check its state
+                        new_send_buttons = self.driver.find_elements(By.CSS_SELECTOR, 'button[data-testid="send-button"]')
+                        if new_send_buttons:
+                            new_send_button = new_send_buttons[0]
+                            is_disabled = new_send_button.get_attribute('disabled') or not new_send_button.is_enabled()
+                            if is_disabled:
+                                logger.info("✅ Message sending verified - send button disabled")
+                                sent_successfully = True
+                                break
+                            else:
+                                logger.warning(f"⚠️  Attempt {attempt + 1}: Send button still enabled - message not sent!")
+                                if attempt < max_attempts - 1:
+                                    logger.info("🔄 Retrying send...")
+                                    # Update send_button reference for next attempt
+                                    send_button = new_send_button
+                        else:
+                            logger.info("✅ Send button disappeared - likely sent successfully")
+                            sent_successfully = True
+                            break
+                    except Exception as e:
+                        logger.info(f"✅ Send button verification failed (likely due to page change) - assuming sent: {e}")
+                        sent_successfully = True
+                        break
+                
+                if not sent_successfully:
+                    logger.error("❌ Failed to send message after 3 attempts - send button never disabled")
+                    self.last_response_time = 0
+                    return None
                 
                 if wait_for_completion:
-                    return self.wait_for_response()
+                    try:
+                        response = self.wait_for_response()
+                        # Calculate and store response time
+                        self.last_response_time = time.time() - start_time
+                        logger.info(f"🕒 Total response time: {self.last_response_time:.2f}s")
+                        return response
+                    except Exception as e:
+                        logger.error(f"Failed while waiting for response: {e}")
+                        self.last_response_time = time.time() - start_time
+                        logger.warning(f"⚠️  Prompt sent but response waiting failed after {self.last_response_time:.2f}s")
+                        return None
                 return True
             else:
                 logger.error("Send button not found")
+                self.last_response_time = 0
                 return None
             
         except Exception as e:
@@ -146,7 +195,19 @@ class OpenAIClient(BaseLLMClient):
         
         logger.info("Waiting for ChatGPT response...")
         
-        # Wait for generation to start
+        # CRITICAL: First check if generation actually started
+        time.sleep(2)
+        initial_send_buttons = self.driver.find_elements(By.CSS_SELECTOR, selectors['send_button'])
+        if initial_send_buttons:
+            initial_send_button = initial_send_buttons[0]
+            is_still_enabled = initial_send_button.is_enabled() and initial_send_button.is_displayed()
+            if is_still_enabled:
+                logger.error("❌ CRITICAL: Send button still enabled after 2s - message was NOT sent!")
+                return None
+        
+        logger.info("✅ Send button disabled - generation started")
+        
+        # Wait for generation to continue
         time.sleep(3)
         
         # Track the last response length to detect when generation stops
@@ -170,13 +231,17 @@ class OpenAIClient(BaseLLMClient):
                     time.sleep(3)
                     continue
                 
-                # Secondary check: send button disabled
+                # Secondary check: send button state
                 send_buttons = self.driver.find_elements(By.CSS_SELECTOR, selectors['send_button'])
                 if send_buttons:
                     send_button = send_buttons[0]
                     is_disabled = send_button.get_attribute('disabled') or not send_button.is_enabled()
                     
-                    if is_disabled:
+                    if not is_disabled:
+                        # Send button is ENABLED - this means NO generation is happening
+                        logger.warning("Send button is enabled - no generation happening, probably message not sent!")
+                        return None  # Return None to indicate failure
+                    else:
                         logger.debug("Send button disabled - still generating...")
                         time.sleep(3)
                         continue
@@ -617,7 +682,7 @@ class OpenAIClient(BaseLLMClient):
                 {
                     'gpt-4.5': 'https://chatgpt.com/?model=gpt-4.5',
                     'gpt-o3': 'https://chatgpt.com/?model=o3', 
-                    'gpt-o4-mini-high': 'https://chatgpt.com/?model=gpt-4o-mini'
+                    'gpt-o4-mini-high': 'https://chatgpt.com/?model=o4-mini-high'
                 },
                 {
                     'gpt-4.5': 'https://chatgpt.com/?model=gpt4.5',

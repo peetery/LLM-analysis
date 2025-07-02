@@ -15,6 +15,24 @@ class PromptStrategy:
             # Znajdź katalog prompts_results względem lokalizacji skryptu
             current_file = Path(__file__).parent
             self.base_path = current_file.parent / "prompts_results"
+            
+            # Debug: sprawdź czy ścieżka jest prawidłowa
+            if not self.base_path.exists():
+                logger.warning(f"Base path {self.base_path} doesn't exist, trying alternative paths")
+                # Spróbuj inne ścieżki
+                alternatives = [
+                    Path.cwd().parent / "prompts_results",  # parent of current working dir
+                    Path.cwd() / ".." / "prompts_results",  # relative to cwd
+                    current_file.parent.parent / "prompts_results"  # parent.parent
+                ]
+                
+                for alt_path in alternatives:
+                    if alt_path.exists():
+                        self.base_path = alt_path.resolve()
+                        logger.info(f"Found prompts_results at: {self.base_path}")
+                        break
+                else:
+                    logger.error(f"Could not find prompts_results directory in any of: {[str(p) for p in alternatives]}")
         else:
             self.base_path = Path(base_path)
         self.load_prompts()
@@ -39,12 +57,24 @@ class PromptStrategy:
             key = f"cot_{context}"
             prompt_file = self.base_path / "chain_of_thought_prompting" / context / "prompt.txt"
         
+        logger.info(f"Looking for prompt: {strategy}/{context} at {prompt_file}")
+        logger.info(f"Base path: {self.base_path}")
+        logger.info(f"File exists: {prompt_file.exists()}")
+        
         if key not in self.prompts:
             if prompt_file.exists():
-                self.prompts[key] = prompt_file.read_text(encoding='utf-8')
-                logger.info(f"✓ Loaded prompt: {strategy}/{context}")
+                try:
+                    self.prompts[key] = prompt_file.read_text(encoding='utf-8')
+                    logger.info(f"✓ Loaded prompt: {strategy}/{context} ({len(self.prompts[key])} chars)")
+                except Exception as e:
+                    logger.error(f"✗ Error reading prompt file {prompt_file}: {e}")
+                    return None
             else:
                 logger.error(f"✗ Prompt not found: {prompt_file}")
+                # List available files for debugging
+                if prompt_file.parent.exists():
+                    available_files = list(prompt_file.parent.iterdir())
+                    logger.error(f"Available files in {prompt_file.parent}: {[f.name for f in available_files]}")
                 return None
         
         return self.prompts.get(key)
@@ -146,10 +176,10 @@ class SimplePrompting(PromptStrategy):
             logger.error(f"No prompt template found for simple_prompting/{context_type}")
             return None
         
-        # Wyślij prompt (już gotowy z pliku, nie zamieniamy nic)
-        start_time = time.time()
+        # Wyślij prompt - pomiar czasu wewnątrz send_prompt
         response = llm_client.send_prompt(final_prompt)
-        response_time = time.time() - start_time
+        # Pobierz czas odpowiedzi z klienta (jeśli dostępny)
+        response_time = getattr(llm_client, 'last_response_time', 0)
         
         if response:
             logger.info(f"Simple prompting completed in {response_time:.2f}s")
@@ -167,52 +197,22 @@ class SimplePrompting(PromptStrategy):
 class ChainOfThoughtPrompting(PromptStrategy):
     """Strategia Chain-of-Thought promptowania (3 kroki)"""
     
-    def __init__(self, base_path="prompts_results"):
+    def __init__(self, base_path=None):
         super().__init__(base_path)
         self.cot_prompts = self.parse_cot_prompts()
     
     def parse_cot_prompts(self):
-        """Parsuje prompty Chain-of-Thought z plików"""
+        """Parsuje prompty Chain-of-Thought z plików - używa lazy loading"""
+        # Nie ładujemy wszystkich promptów teraz, tylko sprawdzamy czy istnieją
         cot_prompts = {}
         
         for context in ['interface', 'interface_docstring', 'full_context']:
-            cot_key = f"cot_{context}"
-            if cot_key in self.prompts:
-                content = self.prompts[cot_key]
-                
-                # Podziel na kroki: 1), 2), 3)
-                steps = {}
-                parts = content.split('\n\n')
-                
-                current_step = None
-                current_content = []
-                
-                for part in parts:
-                    part = part.strip()
-                    if part.startswith('1)'):
-                        if current_step:
-                            steps[current_step] = '\n\n'.join(current_content)
-                        current_step = 'step1'
-                        current_content = [part[2:].strip()]
-                    elif part.startswith('2)'):
-                        if current_step:
-                            steps[current_step] = '\n\n'.join(current_content)
-                        current_step = 'step2'
-                        current_content = [part[2:].strip()]
-                    elif part.startswith('3)'):
-                        if current_step:
-                            steps[current_step] = '\n\n'.join(current_content)
-                        current_step = 'step3'
-                        current_content = [part[2:].strip()]
-                    elif current_step:
-                        current_content.append(part)
-                
-                # Dodaj ostatni krok
-                if current_step and current_content:
-                    steps[current_step] = '\n\n'.join(current_content)
-                
-                cot_prompts[context] = steps
-                print(f"✓ Parsed CoT prompts for {context}: {list(steps.keys())}")
+            prompt_file = self.base_path / "chain_of_thought_prompting" / context / "prompt.txt"
+            if prompt_file.exists():
+                logger.info(f"✓ Found CoT prompt file for {context}: {prompt_file}")
+                cot_prompts[context] = True  # Mark as available
+            else:
+                logger.warning(f"✗ Missing CoT prompt file for {context}: {prompt_file}")
         
         return cot_prompts
     
@@ -241,9 +241,8 @@ class ChainOfThoughtPrompting(PromptStrategy):
             logger.error("No step1 prompt found")
             return None
         
-        start_time = time.time()
         response1 = llm_client.send_prompt(prompt1)
-        step1_time = time.time() - start_time
+        step1_time = getattr(llm_client, 'last_response_time', 0)
         total_time += step1_time
         
         if not response1:
@@ -267,9 +266,8 @@ class ChainOfThoughtPrompting(PromptStrategy):
             logger.error("No step2 prompt found")
             return None
             
-        start_time = time.time()
         response2 = llm_client.send_prompt(prompt2)
-        step2_time = time.time() - start_time
+        step2_time = getattr(llm_client, 'last_response_time', 0)
         total_time += step2_time
         
         if not response2:
@@ -292,9 +290,8 @@ class ChainOfThoughtPrompting(PromptStrategy):
             logger.error("No step3 prompt found")
             return None
             
-        start_time = time.time()
         response3 = llm_client.send_prompt(prompt3)
-        step3_time = time.time() - start_time
+        step3_time = getattr(llm_client, 'last_response_time', 0)
         total_time += step3_time
         
         if not response3:

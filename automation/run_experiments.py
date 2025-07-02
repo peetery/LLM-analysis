@@ -38,35 +38,43 @@ def start_chrome_for_debug():
     def create_chrome_data_dir():
         """Tworzy katalog danych Chrome z odpowiednimi uprawnieniami"""
         if is_wsl():
-            # W WSL użyj katalogu w przestrzeni WSL zamiast Windows
-            wsl_temp_dir = "/tmp/chrome_debug_wsl"
+            # W WSL używamy Windows temp directory jako główną opcję
+            # Chrome w Windows nie może zapisywać do katalogu Linux home
+            windows_temp = "/mnt/c/temp/chrome_debug"
             try:
-                os.makedirs(wsl_temp_dir, exist_ok=True)
-                os.chmod(wsl_temp_dir, 0o755)
-                print(f"✓ Created WSL Chrome data directory: {wsl_temp_dir}")
-                return wsl_temp_dir
+                # Utwórz katalog przez Windows cmd
+                subprocess.run([
+                    "cmd.exe", "/c", "mkdir", "C:\\temp\\chrome_debug"
+                ], capture_output=True, check=False)  # ignore errors if exists
+                
+                # Sprawdź czy katalog istnieje
+                if os.path.exists(windows_temp):
+                    print(f"✓ Using Windows temp directory: {windows_temp}")
+                    return windows_temp
+                else:
+                    print(f"⚠️  Windows temp directory not accessible: {windows_temp}")
             except Exception as e:
-                print(f"⚠️  Failed to create WSL directory: {e}")
+                print(f"⚠️  Windows temp creation failed: {e}")
 
-                # Fallback: spróbuj Windows temp ale z utworzeniem katalogu
-                windows_temp = "/mnt/c/temp/chrome_debug"
-                try:
-                    # Utwórz katalog przez Windows cmd
-                    subprocess.run([
-                        "cmd.exe", "/c", "mkdir", "C:\\temp\\chrome_debug"
-                    ], capture_output=True)
+            # Fallback 1: Użyj Windows AppData
+            try:
+                windows_appdata = "/mnt/c/Users/" + os.environ.get('USER', 'ptomalak') + "/AppData/Local/Temp/chrome_debug"
+                subprocess.run([
+                    "cmd.exe", "/c", f"mkdir C:\\Users\\{os.environ.get('USER', 'ptomalak')}\\AppData\\Local\\Temp\\chrome_debug"
+                ], capture_output=True, check=False)
+                
+                if os.path.exists(windows_appdata):
+                    print(f"✓ Using Windows AppData directory: {windows_appdata}")
+                    return windows_appdata
+            except Exception as e2:
+                print(f"⚠️  Windows AppData fallback failed: {e2}")
 
-                    if os.path.exists(windows_temp):
-                        print(f"✓ Created Windows temp directory: {windows_temp}")
-                        return windows_temp
-                except:
-                    pass
-
-                # Last resort: użyj katalogu domowego
-                home_dir = os.path.expanduser("~/chrome_debug_temp")
-                os.makedirs(home_dir, exist_ok=True)
-                print(f"✓ Using home directory: {home_dir}")
-                return home_dir
+            # Fallback 2: użyj katalogu roboczego - Chrome może do niego pisać
+            work_dir = os.path.join(os.getcwd(), "chrome_debug_temp")
+            os.makedirs(work_dir, exist_ok=True)
+            print(f"✓ Using working directory: {work_dir}")
+            print("📝 Note: This directory will be accessible to Windows Chrome")
+            return work_dir
         else:
             # Windows/Linux native
             temp_dir = "C:\\temp\\chrome_debug"
@@ -104,10 +112,13 @@ def start_chrome_for_debug():
         cmd = [
             chrome_path,
             "--remote-debugging-port=9222",
+            "--remote-debugging-address=0.0.0.0",  # Allow connections from WSL
             f"--user-data-dir={data_dir}",
             "--no-first-run",
             "--no-default-browser-check",
-            "--disable-default-apps"
+            "--disable-default-apps",
+            "--disable-web-security",  # For automation
+            "--disable-features=VizDisplayCompositor"  # WSL compatibility
         ]
 
     else:
@@ -156,7 +167,7 @@ def get_model_url(model_name):
     model_urls = {
         'gpt-4.5': 'https://chatgpt.com/?model=gpt-4.5',
         'gpt-o3': 'https://chatgpt.com/?model=o3',
-        'gpt-o4-mini-high': 'https://chatgpt.com/?model=gpt-4o-mini',
+        'gpt-o4-mini-high': 'https://chatgpt.com/?model=o4-mini-high',
         'claude-3.7-sonnet': 'https://claude.ai/',
         'deepseek': 'https://chat.deepseek.com/',
         'gemini-2.5-pro': 'https://gemini.google.com/'

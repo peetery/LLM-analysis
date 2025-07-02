@@ -38,8 +38,17 @@ class BaseLLMClient(ABC):
         # Opcja 1: Podłącz do istniejącej przeglądarki (PRIORYTET!)
         if getattr(self, 'attach_to_existing', False):
             debug_port = getattr(self, 'debug_port', 9222)
-            chrome_options.add_experimental_option("debuggerAddress", f"localhost:{debug_port}")
-            print(f"Connecting to existing browser on port {debug_port}")
+            
+            # W WSL użyj IP Windows hosta zamiast localhost
+            if is_wsl:
+                # Pobierz IP Windows hosta z WSL
+                debug_host = self.get_windows_host_ip()
+                print(f"🐧 WSL: Connecting to Windows Chrome at {debug_host}:{debug_port}")
+            else:
+                debug_host = "localhost"
+                print(f"Connecting to existing browser on port {debug_port}")
+            
+            chrome_options.add_experimental_option("debuggerAddress", f"{debug_host}:{debug_port}")
             # WAŻNE: Wyłącz wszystkie dodatkowe opcje gdy się podłączasz!
             self.use_profile = False
             
@@ -239,3 +248,35 @@ class BaseLLMClient(ABC):
         else:
             # Linux/Windows native - selenium znajdzie automatycznie
             return None
+
+    def get_windows_host_ip(self):
+        """Pobiera IP Windows hosta z WSL"""
+        try:
+            import subprocess
+            # Pobierz IP z /etc/resolv.conf (default gateway w WSL2)
+            result = subprocess.run(['cat', '/etc/resolv.conf'], capture_output=True, text=True)
+            for line in result.stdout.split('\n'):
+                if line.startswith('nameserver'):
+                    ip = line.split()[1]
+                    logger.info(f"✓ Windows host IP: {ip}")
+                    return ip
+            
+            # Fallback - spróbuj hostname
+            result = subprocess.run(['hostname', '-I'], capture_output=True, text=True)
+            if result.stdout.strip():
+                # Weź pierwszy IP z listy
+                ip = result.stdout.strip().split()[0]
+                # Zamień ostatni oktet na 1 (typowy gateway)
+                ip_parts = ip.split('.')
+                if len(ip_parts) == 4:
+                    gateway_ip = f"{ip_parts[0]}.{ip_parts[1]}.{ip_parts[2]}.1"
+                    logger.info(f"✓ Fallback Windows host IP: {gateway_ip}")
+                    return gateway_ip
+            
+            # Hard fallback
+            logger.warning("⚠️  Could not detect Windows host IP, using default")
+            return "172.16.0.1"  # Domyślny gateway w WSL2
+            
+        except Exception as e:
+            logger.error(f"Error getting Windows host IP: {e}")
+            return "172.16.0.1"

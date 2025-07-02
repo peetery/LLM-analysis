@@ -61,7 +61,7 @@ class ExperimentRunner:
                 model_urls = {
                     'gpt-4.5': 'https://chatgpt.com/?model=gpt-4.5',
                     'gpt-o3': 'https://chatgpt.com/?model=o3',
-                    'gpt-o4-mini-high': 'https://chatgpt.com/?model=gpt-4o-mini',
+                    'gpt-o4-mini-high': 'https://chatgpt.com/?model=o4-mini-high',
                     'claude-3.7-sonnet': 'https://claude.ai/',
                     'deepseek': 'https://chat.deepseek.com/',
                     'gemini-2.5-pro': 'https://gemini.google.com/'
@@ -554,13 +554,31 @@ class ExperimentRunner:
             config = json.load(f)
         
         results = []
+        current_client = None
+        current_model = None
         
-        for experiment in config['experiments']:
+        # Sprawdź czy mamy klienta z poprzedniego eksperymentu
+        new_chat_per_experiment = config.get('new_chat_per_experiment', True)
+        
+        for i, experiment in enumerate(config['experiments']):
             model = experiment['model']
             strategy = experiment['strategy']
             context = experiment['context']
             
-            logger.info(f"Running experiment: {model} - {strategy} - {context}")
+            logger.info(f"Running experiment {i+1}/{len(config['experiments'])}: {model} - {strategy} - {context}")
+            
+            # Sprawdź czy trzeba uruchomić nowy czat
+            if new_chat_per_experiment and current_client and current_model == model:
+                logger.info("🔄 Starting new chat for same model...")
+                try:
+                    if hasattr(current_client, 'start_new_chat'):
+                        current_client.start_new_chat()
+                        time.sleep(3)  # Czas na załadowanie nowego czatu
+                        logger.info("✅ New chat started successfully")
+                    else:
+                        logger.warning("⚠️  Model doesn't support new chat - using same conversation")
+                except Exception as e:
+                    logger.warning(f"⚠️  Failed to start new chat: {e} - using same conversation")
             
             result = self.run_single_experiment(
                 model, strategy, context, 
@@ -569,13 +587,32 @@ class ExperimentRunner:
             
             if result:
                 results.append(result)
-                logger.info("Experiment completed successfully")
+                logger.info(f"✅ Experiment {i+1} completed successfully")
+                
+                # Zapisz aktualnego klienta do reużycia (jeśli ten sam model następny)
+                if i < len(config['experiments']) - 1:
+                    next_model = config['experiments'][i+1]['model']
+                    if next_model == model:
+                        # Pobierz klienta z ostatniego eksperymentu
+                        client_class = self.model_clients[model]
+                        # Store for reuse - ale nie zapisujemy instancji bo może być zamknięta
+                        current_model = model
+                        logger.info(f"📝 Next experiment uses same model ({model}) - will reuse connection")
+                    else:
+                        current_client = None
+                        current_model = None
             else:
-                logger.error("Experiment failed")
+                logger.error(f"❌ Experiment {i+1} failed")
+                current_client = None
+                current_model = None
             
             # Przerwa między eksperymentami
-            time.sleep(config.get('delay_between_experiments', 10))
+            delay = config.get('delay_between_experiments', 10)
+            if i < len(config['experiments']) - 1:  # Nie czekaj po ostatnim
+                logger.info(f"⏳ Waiting {delay}s before next experiment...")
+                time.sleep(delay)
         
+        logger.info(f"🎉 Batch completed! {len(results)}/{len(config['experiments'])} experiments successful")
         return results
     
     def test_compilation_and_execution(self, tests_file):
