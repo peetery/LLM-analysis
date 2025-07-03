@@ -48,7 +48,7 @@ class DeepseekClient(BaseLLMClient):
             input("Login if needed and press Enter...")
             return True
     
-    def send_prompt(self, prompt_text, wait_for_completion=True):
+    def send_prompt(self, prompt_text, wait_for_completion=True, skip_model_verification=False):
         """Wysłanie promptu do Deepseek"""
         selectors = self.get_selectors()
         start_time = time.time()

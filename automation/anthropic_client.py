@@ -48,7 +48,7 @@ class AnthropicClient(BaseLLMClient):
             input("Press Enter after login...")
             return True
     
-    def send_prompt(self, prompt_text, wait_for_completion=True):
+    def send_prompt(self, prompt_text, wait_for_completion=True, skip_model_verification=False):
         """Wysłanie promptu do Claude"""
         selectors = self.get_selectors()
         start_time = time.time()  # Start timing

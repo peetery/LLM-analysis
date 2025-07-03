@@ -5,21 +5,6 @@
   "experiments": [
     {
       "model": "gpt-o4-mini-high",
-      "strategy": "simple_prompting",
-      "context": "interface"
-    },
-    {
-      "model": "gpt-o4-mini-high",
-      "strategy": "simple_prompting", 
-      "context": "interface_docstring"
-    },
-    {
-      "model": "gpt-o4-mini-high",
-      "strategy": "simple_prompting",
-      "context": "full_context"
-    },
-    {
-      "model": "gpt-o4-mini-high",
       "strategy": "chain_of_thought_prompting",
       "context": "interface"
     },
@@ -30,96 +15,6 @@
     },
     {
       "model": "gpt-o4-mini-high",
-      "strategy": "chain_of_thought_prompting",
-      "context": "full_context"
-    },
-    {
-      "model": "claude-3.7-sonnet",
-      "strategy": "simple_prompting",
-      "context": "interface"
-    },
-    {
-      "model": "claude-3.7-sonnet",
-      "strategy": "simple_prompting",
-      "context": "interface_docstring"
-    },
-    {
-      "model": "claude-3.7-sonnet",
-      "strategy": "simple_prompting",
-      "context": "full_context"
-    },
-    {
-      "model": "claude-3.7-sonnet",
-      "strategy": "chain_of_thought_prompting",
-      "context": "interface"
-    },
-    {
-      "model": "claude-3.7-sonnet",
-      "strategy": "chain_of_thought_prompting",
-      "context": "interface_docstring"
-    },
-    {
-      "model": "claude-3.7-sonnet",
-      "strategy": "chain_of_thought_prompting",
-      "context": "full_context"
-    },
-    {
-      "model": "deepseek",
-      "strategy": "simple_prompting",
-      "context": "interface"
-    },
-    {
-      "model": "deepseek",
-      "strategy": "simple_prompting",
-      "context": "interface_docstring"
-    },
-    {
-      "model": "deepseek",
-      "strategy": "simple_prompting",
-      "context": "full_context"
-    },
-    {
-      "model": "deepseek",
-      "strategy": "chain_of_thought_prompting",
-      "context": "interface"
-    },
-    {
-      "model": "deepseek",
-      "strategy": "chain_of_thought_prompting",
-      "context": "interface_docstring"
-    },
-    {
-      "model": "deepseek",
-      "strategy": "chain_of_thought_prompting",
-      "context": "full_context"
-    },
-    {
-      "model": "gemini-2.5-pro",
-      "strategy": "simple_prompting",
-      "context": "interface"
-    },
-    {
-      "model": "gemini-2.5-pro",
-      "strategy": "simple_prompting",
-      "context": "interface_docstring"
-    },
-    {
-      "model": "gemini-2.5-pro",
-      "strategy": "simple_prompting",
-      "context": "full_context"
-    },
-    {
-      "model": "gemini-2.5-pro",
-      "strategy": "chain_of_thought_prompting",
-      "context": "interface"
-    },
-    {
-      "model": "gemini-2.5-pro",
-      "strategy": "chain_of_thought_prompting",
-      "context": "interface_docstring"
-    },
-    {
-      "model": "gemini-2.5-pro",
       "strategy": "chain_of_thought_prompting",
       "context": "full_context"
     }

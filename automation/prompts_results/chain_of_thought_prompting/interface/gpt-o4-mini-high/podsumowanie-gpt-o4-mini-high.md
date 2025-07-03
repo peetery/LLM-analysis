@@ -1,6 +1,6 @@
 # Podsumowanie analizy pokrycia testów jednostkowych (Model: gpt-o4-mini-high)
 # Kontekst: interface
-# Strategia promptowania: simple-prompting
+# Strategia promptowania: chain-of-thought-prompting
 
 ## coverage.py
 - missing: N/A
@@ -19,14 +19,14 @@
 
 Liczba wszystkich własnych scenariuszy: 54
 
-- Testy wygenerowane przez LLM: 26
-- Testy zakończone powodzeniem: 22
-- Testy zakończone niepowodzeniem: 4
+- Testy wygenerowane przez LLM: 65
+- Testy zakończone powodzeniem: 53
+- Testy zakończone niepowodzeniem: 12
 
-- Test success rate: 84.6%
-- Scenario coverage rate: 75.9%
+- Test success rate: 81.5%
+- Scenario coverage rate: 168.5%
 
 ## Automatycznie wygenerowane przez LLM Testing Automation
-- Response time: 19.92s
-- Generated at: 2025-07-04T00:50:27.513374
+- Response time: 112.75s
+- Generated at: 2025-07-04T01:05:21.887790
 

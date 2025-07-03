@@ -2,150 +2,124 @@ import unittest
 from order_calculator import OrderCalculator
 
 class TestOrderCalculator(unittest.TestCase):
+
     def setUp(self):
-        self.calc = OrderCalculator()
+        self.calculator = OrderCalculator()
 
-    def test_init_defaults(self):
-        self.assertEqual(self.calc.tax_rate, 0.23)
-        self.assertEqual(self.calc.free_shipping_threshold, 100.0)
-        self.assertEqual(self.calc.shipping_cost, 10.0)
-        self.assertTrue(self.calc.is_empty())
+    def test_is_empty_initial(self):
+        self.assertTrue(self.calculator.is_empty())
 
-    def test_init_custom_parameters(self):
-        custom = OrderCalculator(tax_rate=0.1, free_shipping_threshold=50.0, shipping_cost=5.0)
-        self.assertEqual(custom.tax_rate, 0.1)
-        self.assertEqual(custom.free_shipping_threshold, 50.0)
-        self.assertEqual(custom.shipping_cost, 5.0)
-
-    def test_add_item_and_list_and_total_items(self):
-        self.calc.add_item("apple", 1.0, 3)
-        self.assertIn("apple", self.calc.list_items())
-        self.assertEqual(self.calc.total_items(), 3)
-
-    def test_add_item_default_quantity(self):
-        self.calc.add_item("banana", 2.0)
-        self.assertEqual(self.calc.total_items(), 1)
+    def test_add_item_and_is_not_empty(self):
+        self.calculator.add_item("apple", 1.0, 2)
+        self.assertFalse(self.calculator.is_empty())
 
     def test_add_item_invalid_name_type(self):
         with self.assertRaises(TypeError):
-            self.calc.add_item(123, 1.0, 1)
+            self.calculator.add_item(123, 1.0, 1)
 
     def test_add_item_invalid_price_type(self):
         with self.assertRaises(TypeError):
-            self.calc.add_item("item", "free", 1)
-
-    def test_add_item_negative_price(self):
-        with self.assertRaises(ValueError):
-            self.calc.add_item("item", -5.0, 1)
+            self.calculator.add_item("apple", "free", 1)
 
     def test_add_item_invalid_quantity_type(self):
         with self.assertRaises(TypeError):
-            self.calc.add_item("item", 1.0, "two")
+            self.calculator.add_item("apple", 1.0, "two")
 
-    def test_add_item_negative_quantity(self):
+    def test_add_item_negative_price(self):
         with self.assertRaises(ValueError):
-            self.calc.add_item("item", 1.0, -1)
+            self.calculator.add_item("apple", -1.0, 1)
+
+    def test_add_item_zero_quantity(self):
+        with self.assertRaises(ValueError):
+            self.calculator.add_item("apple", 1.0, 0)
 
     def test_remove_item(self):
-        self.calc.add_item("pear", 2.0, 2)
-        self.calc.remove_item("pear")
-        self.assertNotIn("pear", self.calc.list_items())
-        self.assertEqual(self.calc.total_items(), 0)
+        self.calculator.add_item("banana", 2.0, 3)
+        self.calculator.remove_item("banana")
+        self.assertTrue(self.calculator.is_empty())
 
-    def test_remove_nonexistent_item_raises(self):
-        with self.assertRaises(ValueError):
-            self.calc.remove_item("nonexistent")
+    def test_remove_item_nonexistent(self):
+        with self.assertRaises(KeyError):
+            self.calculator.remove_item("pear")
 
     def test_get_subtotal_empty(self):
-        self.assertEqual(self.calc.get_subtotal(), 0.0)
+        self.assertEqual(self.calculator.get_subtotal(), 0.0)
 
     def test_get_subtotal_multiple_items(self):
-        self.calc.add_item("a", 1.5, 2)
-        self.calc.add_item("b", 2.0, 3)
-        self.assertAlmostEqual(self.calc.get_subtotal(), 1.5*2 + 2.0*3)
+        self.calculator.add_item("a", 5.0, 2)
+        self.calculator.add_item("b", 3.0, 1)
+        self.assertAlmostEqual(self.calculator.get_subtotal(), 13.0)
 
     def test_apply_discount_typical(self):
-        subtotal = 100.0
-        self.assertEqual(self.calc.apply_discount(subtotal, 10.0), 90.0)
+        result = self.calculator.apply_discount(100.0, 15.0)
+        self.assertAlmostEqual(result, 85.0)
 
     def test_apply_discount_zero(self):
-        subtotal = 50.0
-        self.assertEqual(self.calc.apply_discount(subtotal, 0.0), 50.0)
+        result = self.calculator.apply_discount(50.0, 0.0)
+        self.assertAlmostEqual(result, 50.0)
 
-    def test_apply_discount_equal_subtotal(self):
-        subtotal = 20.0
-        self.assertEqual(self.calc.apply_discount(subtotal, 20.0), 0.0)
-
-    def test_apply_discount_negative_discount(self):
+    def test_apply_discount_invalid_negative(self):
         with self.assertRaises(ValueError):
-            self.calc.apply_discount(50.0, -5.0)
+            self.calculator.apply_discount(50.0, -5.0)
 
-    def test_apply_discount_exceeds_subtotal(self):
+    def test_apply_discount_invalid_too_large(self):
         with self.assertRaises(ValueError):
-            self.calc.apply_discount(30.0, 40.0)
+            self.calculator.apply_discount(30.0, 40.0)
 
     def test_calculate_shipping_below_threshold(self):
-        self.assertEqual(self.calc.calculate_shipping(50.0), 10.0)
+        cost = self.calculator.calculate_shipping(50.0)
+        self.assertAlmostEqual(cost, 10.0)
 
     def test_calculate_shipping_at_threshold(self):
-        self.assertEqual(self.calc.calculate_shipping(100.0), 0.0)
+        cost = self.calculator.calculate_shipping(100.0)
+        self.assertAlmostEqual(cost, 0.0)
 
     def test_calculate_shipping_above_threshold(self):
-        self.assertEqual(self.calc.calculate_shipping(150.0), 0.0)
+        cost = self.calculator.calculate_shipping(150.0)
+        self.assertAlmostEqual(cost, 0.0)
 
     def test_calculate_tax_typical(self):
-        amount = 100.0
-        expected = amount * self.calc.tax_rate
-        self.assertAlmostEqual(self.calc.calculate_tax(amount), expected)
+        tax = self.calculator.calculate_tax(200.0)
+        self.assertAlmostEqual(tax, 200.0 * 0.23)
 
     def test_calculate_tax_zero(self):
-        self.assertEqual(self.calc.calculate_tax(0.0), 0.0)
-
-    def test_calculate_tax_negative_amount(self):
-        with self.assertRaises(ValueError):
-            self.calc.calculate_tax(-10.0)
-
-    def test_calculate_total_no_discount_below_threshold(self):
-        self.calc.add_item("x", 10.0, 2)
-        total = self.calc.calculate_total()
-        subtotal = 10.0 * 2
-        shipping = self.calc.shipping_cost
-        tax = (subtotal + shipping) * self.calc.tax_rate
-        self.assertAlmostEqual(total, subtotal + shipping + tax)
-
-    def test_calculate_total_with_discount_above_threshold(self):
-        self.calc.add_item("y", 60.0, 2)
-        total = self.calc.calculate_total(discount=20.0)
-        subtotal = 60.0 * 2
-        discounted = subtotal - 20.0
-        shipping = 0.0
-        tax = discounted * self.calc.tax_rate
-        self.assertAlmostEqual(total, discounted + shipping + tax)
-
-    def test_calculate_total_invalid_discount(self):
-        with self.assertRaises(ValueError):
-            self.calc.calculate_total(discount=-5.0)
+        tax = self.calculator.calculate_tax(0.0)
+        self.assertAlmostEqual(tax, 0.0)
 
     def test_total_items_empty(self):
-        self.assertEqual(self.calc.total_items(), 0)
+        self.assertEqual(self.calculator.total_items(), 0)
+
+    def test_total_items_after_adding(self):
+        self.calculator.add_item("x", 2.0, 3)
+        self.calculator.add_item("y", 5.0, 2)
+        self.assertEqual(self.calculator.total_items(), 5)
 
     def test_clear_order(self):
-        self.calc.add_item("z", 5.0, 1)
-        self.calc.clear_order()
-        self.assertTrue(self.calc.is_empty())
-        self.assertEqual(self.calc.list_items(), [])
+        self.calculator.add_item("z", 1.0, 1)
+        self.calculator.clear_order()
+        self.assertTrue(self.calculator.is_empty())
+        self.assertEqual(self.calculator.total_items(), 0)
 
-    def test_list_items_multiple(self):
-        self.calc.add_item("a", 1.0, 1)
-        self.calc.add_item("b", 2.0, 2)
-        self.assertCountEqual(self.calc.list_items(), ["a", "b"])
+    def test_list_items(self):
+        self.calculator.add_item("item1", 1.0, 1)
+        self.calculator.add_item("item2", 2.0, 2)
+        items = self.calculator.list_items()
+        self.assertCountEqual(items, ["item1", "item2"])
 
-    def test_is_empty_true(self):
-        self.assertTrue(self.calc.is_empty())
+    def test_calculate_total_typical(self):
+        oc = OrderCalculator(tax_rate=0.1, free_shipping_threshold=1000.0, shipping_cost=5.0)
+        oc.add_item("a", 10.0, 2)
+        oc.add_item("b", 20.0, 1)
+        total = oc.calculate_total(discount=5.0)
+        # subtotal = 40, discounted = 35, shipping = 5, tax = 3.5, total = 43.5
+        self.assertAlmostEqual(total, 43.5)
 
-    def test_is_empty_false(self):
-        self.calc.add_item("item", 1.0, 1)
-        self.assertFalse(self.calc.is_empty())
+    def test_calculate_total_no_discount(self):
+        oc = OrderCalculator(tax_rate=0.2, free_shipping_threshold=0.0, shipping_cost=10.0)
+        oc.add_item("a", 50.0, 1)
+        total = oc.calculate_total()
+        # subtotal = 50, discounted = 50, shipping = 0, tax = 10
+        self.assertAlmostEqual(total, 60.0)
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()

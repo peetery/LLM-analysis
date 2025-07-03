@@ -1,17 +1,17 @@
 # Podsumowanie analizy pokrycia testów jednostkowych (Model: gpt-o4-mini-high)
-# Kontekst: interface
-# Strategia promptowania: simple-prompting
+# Kontekst: interface_docstring
+# Strategia promptowania: chain-of-thought-prompting
 
 ## coverage.py
-- missing: N/A
-- coverage: N/A%
+- missing: 1
+- coverage: 56%
 
 ## mutmut.py
 ⠋ 0/0  🎉 0 🫥 0  ⏰ 0  🤔 0  🙁 0  🔇 0
 
 ## Rezultaty
 - Compilation success rate: 100%
-- Statement coverage: 0%
+- Statement coverage: 56%
 - Branch coverage: 0%
 - Mutation score: 0.0%
 
@@ -19,14 +19,14 @@
 
 Liczba wszystkich własnych scenariuszy: 54
 
-- Testy wygenerowane przez LLM: 26
-- Testy zakończone powodzeniem: 22
-- Testy zakończone niepowodzeniem: 4
+- Testy wygenerowane przez LLM: 56
+- Testy zakończone powodzeniem: 56
+- Testy zakończone niepowodzeniem: 0
 
-- Test success rate: 84.6%
-- Scenario coverage rate: 75.9%
+- Test success rate: 100.0%
+- Scenario coverage rate: 137.0%
 
 ## Automatycznie wygenerowane przez LLM Testing Automation
-- Response time: 19.92s
-- Generated at: 2025-07-04T00:50:27.513374
+- Response time: 85.25s
+- Generated at: 2025-07-04T01:07:34.675911
 

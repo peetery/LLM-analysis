@@ -54,15 +54,18 @@ class OpenAIClient(BaseLLMClient):
             logger.error("❌ Open Chrome, go to https://chatgpt.com, log in, then run automation.")
             return False
     
-    def send_prompt(self, prompt_text, wait_for_completion=True):
-        """Send prompt to ChatGPT with model verification"""
+    def send_prompt(self, prompt_text, wait_for_completion=True, skip_model_verification=False):
+        """Send prompt to ChatGPT with optional model verification"""
         selectors = self.get_selectors()
         start_time = time.time()  # Start timing from here
         
-        # KLUCZOWE: Sprawdź model przed wysłaniem promptu
-        logger.info(f"🔍 Verifying model before sending prompt...")
-        if not self.verify_and_ensure_model():
-            logger.warning("⚠️  Model verification failed, but continuing with prompt")
+        # KLUCZOWE: Sprawdź model przed wysłaniem promptu (ale nie w chain-of-thought!)
+        if not skip_model_verification:
+            logger.info(f"🔍 Verifying model before sending prompt...")
+            if not self.verify_and_ensure_model():
+                logger.warning("⚠️  Model verification failed, but continuing with prompt")
+        else:
+            logger.debug("⏭️  Skipping model verification (chain-of-thought mode)")
         
         # Sprawdź czy nie ma alertów/popupów
         self.handle_popups_and_alerts()
@@ -653,7 +656,7 @@ class OpenAIClient(BaseLLMClient):
         model_mapping = {
             'gpt-4.5': ['4.5', 'gpt-4.5', 'gpt 4.5'],
             'gpt-o3': ['o3', 'gpt-o3', 'gpt o3'],
-            'gpt-o4-mini-high': ['4o-mini', 'gpt-4o-mini', '4o mini']
+            'gpt-o4-mini-high': ['o4-mini-high', 'gpt-o4-mini-high']
         }
         
         return model_mapping.get(self.model_name, [self.model_name])
@@ -682,7 +685,7 @@ class OpenAIClient(BaseLLMClient):
                 {
                     'gpt-4.5': 'https://chatgpt.com/?model=gpt-4.5',
                     'gpt-o3': 'https://chatgpt.com/?model=o3', 
-                    'gpt-o4-mini-high': 'https://chatgpt.com/?model=o4-mini-high'
+                    'gpt-o4-mini-high': 'https://chatgpt.com/?model=gpt-4o-mini'
                 },
                 {
                     'gpt-4.5': 'https://chatgpt.com/?model=gpt4.5',

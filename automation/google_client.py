@@ -48,7 +48,7 @@ class GoogleClient(BaseLLMClient):
             input("Login to Google account if needed and press Enter...")
             return True
     
-    def send_prompt(self, prompt_text, wait_for_completion=True):
+    def send_prompt(self, prompt_text, wait_for_completion=True, skip_model_verification=False):
         """Wysłanie promptu do Google Gemini"""
         selectors = self.get_selectors()
         start_time = time.time()

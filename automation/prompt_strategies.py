@@ -234,14 +234,14 @@ class ChainOfThoughtPrompting(PromptStrategy):
         total_time = 0
         responses = []
         
-        # Krok 1: Analiza
+        # Krok 1: Analiza (z weryfikacją modelu)
         logger.info("Step 1: Code analysis")
         prompt1 = steps.get('step1', '')
         if not prompt1:
             logger.error("No step1 prompt found")
             return None
         
-        response1 = llm_client.send_prompt(prompt1)
+        response1 = llm_client.send_prompt(prompt1, skip_model_verification=False)
         step1_time = getattr(llm_client, 'last_response_time', 0)
         total_time += step1_time
         
@@ -259,14 +259,14 @@ class ChainOfThoughtPrompting(PromptStrategy):
         # Krótka przerwa między krokami
         time.sleep(2)
         
-        # Krok 2: Strategia
+        # Krok 2: Strategia (BEZ weryfikacji modelu - zostajemy w tym samym czacie!)
         logger.info("Step 2: Test strategy")
         prompt2 = steps.get('step2', '')
         if not prompt2:
             logger.error("No step2 prompt found")
             return None
             
-        response2 = llm_client.send_prompt(prompt2)
+        response2 = llm_client.send_prompt(prompt2, skip_model_verification=True)
         step2_time = getattr(llm_client, 'last_response_time', 0)
         total_time += step2_time
         
@@ -283,14 +283,14 @@ class ChainOfThoughtPrompting(PromptStrategy):
         
         time.sleep(2)
         
-        # Krok 3: Implementacja
+        # Krok 3: Implementacja (BEZ weryfikacji modelu - zostajemy w tym samym czacie!)
         logger.info("Step 3: Code generation")
         prompt3 = steps.get('step3', '')
         if not prompt3:
             logger.error("No step3 prompt found")
             return None
             
-        response3 = llm_client.send_prompt(prompt3)
+        response3 = llm_client.send_prompt(prompt3, skip_model_verification=True)
         step3_time = getattr(llm_client, 'last_response_time', 0)
         total_time += step3_time
         

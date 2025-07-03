@@ -1,0 +1,86 @@
+{
+  "compilation": {
+    "compilation_success": true,
+    "execution_success": true,
+    "tests_run": 56,
+    "tests_passed": 56,
+    "tests_failed": 0,
+    "test_errors": [],
+    "compilation_errors": []
+  },
+  "coverage": {
+    "statements": 93,
+    "missing": 1,
+    "coverage_percent": 56,
+    "branch_coverage_percent": 0,
+    "partial_coverage": 0
+  },
+  "mutation": {
+    "total_mutants": 0,
+    "killed": 0,
+    "survived": 0,
+    "timeout": 0,
+    "suspicious": 0,
+    "skipped": 0,
+    "mutation_score": 0.0
+  },
+  "scenarios": {
+    "total_test_methods": 56,
+    "covered_scenarios": {
+      "init_scenarios": 9,
+      "add_item_scenarios": 10,
+      "remove_item_scenarios": 3,
+      "get_subtotal_scenarios": 4,
+      "apply_discount_scenarios": 11,
+      "calculate_shipping_scenarios": 4,
+      "calculate_tax_scenarios": 4,
+      "calculate_total_scenarios": 1,
+      "total_items_scenarios": 2,
+      "list_items_scenarios": 3,
+      "is_empty_scenarios": 3,
+      "clear_order_scenarios": 1,
+      "corner_cases": 19,
+      "performance_tests": 0,
+      "precision_tests": 0
+    },
+    "quality_metrics": {
+      "has_setup_teardown": false,
+      "uses_assertions": 69,
+      "tests_with_multiple_assertions": 7,
+      "uses_context_managers": 30,
+      "has_edge_case_testing": false,
+      "has_error_testing": 30,
+      "average_test_length": 5.160714285714286
+    },
+    "scenarios_file_found": true,
+    "total_defined_scenarios": 54
+  },
+  "summary": {
+    "model": "gpt-o4-mini-high",
+    "strategy": "chain_of_thought_prompting",
+    "context_type": "interface_docstring",
+    "timestamp": "2025-07-04T01:07:34.675911",
+    "response_time": 85.25155329704285,
+    "compilation_success_rate": 100,
+    "execution_success_rate": 100,
+    "tests_generated": 56,
+    "tests_passed": 56,
+    "tests_failed": 0,
+    "test_success_rate": 100.0,
+    "statement_coverage": 56,
+    "branch_coverage": 0,
+    "missing_statements": 1,
+    "total_statements": 93,
+    "mutation_score": 0.0,
+    "mutants_killed": 0,
+    "mutants_survived": 0,
+    "total_mutants": 0,
+    "total_test_methods": 56,
+    "covered_scenarios_count": 74,
+    "total_defined_scenarios": 54,
+    "scenario_coverage_rate": 137.0,
+    "total_assertions": 69,
+    "tests_with_error_handling": 30,
+    "average_test_length": 5.2
+  }
+}
