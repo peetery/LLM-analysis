@@ -1,0 +1,9 @@
+{
+  "total_mutants": 0,
+  "killed": 0,
+  "survived": 0,
+  "timeout": 0,
+  "suspicious": 0,
+  "skipped": 0,
+  "mutation_score": 0.0
+}

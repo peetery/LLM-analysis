@@ -1,0 +1,66 @@
+{
+  "compilation": {
+    "compilation_success": false,
+    "execution_success": false,
+    "tests_run": 0,
+    "tests_passed": 0,
+    "tests_failed": 0,
+    "test_errors": [],
+    "compilation_errors": [
+      "Sorry: IndentationError: expected an indented block after class definition on line 3 (tests.py, line 4)"
+    ]
+  },
+  "coverage": null,
+  "mutation": null,
+  "scenarios": {
+    "total_test_methods": 47,
+    "covered_scenarios": {
+      "init_scenarios": 8,
+      "add_item_scenarios": 10,
+      "remove_item_scenarios": 3,
+      "get_subtotal_scenarios": 4,
+      "apply_discount_scenarios": 6,
+      "calculate_shipping_scenarios": 4,
+      "calculate_tax_scenarios": 3,
+      "calculate_total_scenarios": 1,
+      "total_items_scenarios": 2,
+      "list_items_scenarios": 3,
+      "is_empty_scenarios": 2,
+      "clear_order_scenarios": 1,
+      "corner_cases": 28,
+      "performance_tests": 0,
+      "precision_tests": 0
+    },
+    "quality_metrics": {
+      "has_setup_teardown": true,
+      "uses_assertions": 67,
+      "tests_with_multiple_assertions": 13,
+      "uses_context_managers": 25,
+      "has_edge_case_testing": false,
+      "has_error_testing": 25,
+      "average_test_length": 4.8936170212765955
+    },
+    "scenarios_file_found": true,
+    "total_defined_scenarios": 54
+  },
+  "summary": {
+    "model": "claude-3.7-sonnet",
+    "strategy": "simple_prompting",
+    "context_type": "full_context",
+    "timestamp": "2025-07-05T18:08:22.371205",
+    "response_time": 45.46949005126953,
+    "compilation_success_rate": 0,
+    "execution_success_rate": 0,
+    "tests_generated": 0,
+    "tests_passed": 0,
+    "tests_failed": 0,
+    "test_success_rate": 0,
+    "total_test_methods": 47,
+    "covered_scenarios_count": 75,
+    "total_defined_scenarios": 54,
+    "scenario_coverage_rate": 138.9,
+    "total_assertions": 67,
+    "tests_with_error_handling": 25,
+    "average_test_length": 4.9
+  }
+}

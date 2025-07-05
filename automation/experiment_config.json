@@ -3,19 +3,19 @@
   "delay_between_experiments": 30,
   "new_chat_per_experiment": true,
   "experiments": [
-    {
-      "model": "gpt-o4-mini-high",
-      "strategy": "chain_of_thought_prompting",
+{
+      "model": "deepseek",
+      "strategy": "simple_prompting",
       "context": "interface"
     },
     {
-      "model": "gpt-o4-mini-high",
-      "strategy": "chain_of_thought_prompting",
+      "model": "deepseek",
+      "strategy": "simple_prompting",
       "context": "interface_docstring"
     },
     {
-      "model": "gpt-o4-mini-high",
-      "strategy": "chain_of_thought_prompting",
+      "model": "deepseek",
+      "strategy": "simple_prompting",
       "context": "full_context"
     }
   ]
