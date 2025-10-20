@@ -1,7 +1,3 @@
-"""
-CLI Experiment Runner
-"""
-
 import logging
 import json
 from pathlib import Path
@@ -18,15 +14,56 @@ logger = logging.getLogger(__name__)
 
 class CLIExperimentRunner:
 
-    def __init__(self, base_results_dir="cli_results"):
+    def __init__(self, base_results_dir="cli_results", run_id=None):
         self.base_results_dir = Path(base_results_dir)
         self.base_results_dir.mkdir(parents=True, exist_ok=True)
+        self.run_id = run_id
 
         self.cli_clients = {
             'claude-code-sonnet-4.5': lambda: ClaudeCodeClient(model="claude-sonnet-4.5"),
         }
 
         logger.info(f"CLI Experiment Runner initialized with {len(self.cli_clients)} models")
+        if run_id == "overwrite":
+            logger.info("Run mode: overwrite (legacy - no run numbering)")
+        elif run_id is not None:
+            logger.info(f"Run mode: fixed run ID = {run_id}")
+        else:
+            logger.info("Run mode: auto-increment run numbering")
+
+    def _get_next_run_id(self, base_dir: Path) -> int:
+        if not base_dir.exists():
+            return 1
+
+        existing_runs = []
+        for item in base_dir.iterdir():
+            if item.is_dir() and item.name.startswith('run_'):
+                try:
+                    run_num = int(item.name.replace('run_', ''))
+                    existing_runs.append(run_num)
+                except ValueError:
+                    continue
+
+        if not existing_runs:
+            return 1
+
+        return max(existing_runs) + 1
+
+    def _get_result_dir(self, strategy_name: str, context_type: str, model_name: str) -> Path:
+        base_path = self.base_results_dir / strategy_name / context_type / model_name
+
+        if self.run_id == "overwrite":
+            return base_path
+
+        if self.run_id is None:
+            next_run = self._get_next_run_id(base_path)
+            run_dir = base_path / f"run_{next_run:03d}"
+            logger.info(f"Using auto-incremented run: run_{next_run:03d}")
+            return run_dir
+
+        run_dir = base_path / f"run_{self.run_id:03d}"
+        logger.info(f"Using specified run: run_{self.run_id:03d}")
+        return run_dir
 
     def run_single_experiment(
         self,
@@ -42,8 +79,9 @@ class CLIExperimentRunner:
                 f"Available models: {', '.join(self.cli_clients.keys())}"
             )
 
-        result_dir = self.base_results_dir / strategy_name / context_type / model_name
+        result_dir = self._get_result_dir(strategy_name, context_type, model_name)
         result_dir.mkdir(parents=True, exist_ok=True)
+        logger.info(f"Results will be saved to: {result_dir}")
 
         try:
             client_factory = self.cli_clients[model_name]
@@ -163,7 +201,29 @@ class CLIExperimentRunner:
 def main():
     import argparse
 
-    parser = argparse.ArgumentParser(description='CLI Experiment Runner')
+    parser = argparse.ArgumentParser(
+        description='CLI Experiment Runner with multi-run support',
+        epilog='''
+Run ID modes:
+  - No --run-id: Auto-increment (creates run_001, run_002, etc.)
+  - --run-id N: Use specific run number (e.g., --run-id 1 creates run_001)
+  - --run-id overwrite: Legacy mode, no run numbering (overwrites existing results)
+
+Examples:
+  # First run (creates run_001)
+  python cli_experiment_runner.py --model claude-code-sonnet-4.5 --strategy simple_prompting --context interface
+
+  # Second run (creates run_002)
+  python cli_experiment_runner.py --model claude-code-sonnet-4.5 --strategy simple_prompting --context interface
+
+  # Specific run
+  python cli_experiment_runner.py --model claude-code-sonnet-4.5 --strategy simple_prompting --context interface --run-id 5
+
+  # Batch with auto-increment
+  python cli_experiment_runner.py --config cli_config.json
+        ''',
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument('--model', help='Model name')
     parser.add_argument('--strategy', choices=['simple_prompting', 'chain_of_thought_prompting'],
                         help='Prompting strategy')
@@ -172,6 +232,8 @@ def main():
     parser.add_argument('--config', help='JSON config file for batch experiments')
     parser.add_argument('--list-models', action='store_true',
                         help='List available models')
+    parser.add_argument('--run-id', type=str, default=None,
+                        help='Run identifier: number (e.g., 1), "overwrite", or omit for auto-increment')
 
     args = parser.parse_args()
 
@@ -184,7 +246,21 @@ def main():
         ]
     )
 
-    runner = CLIExperimentRunner()
+    run_id = None
+    if args.run_id is not None:
+        if args.run_id.lower() == 'overwrite':
+            run_id = "overwrite"
+        else:
+            try:
+                run_id = int(args.run_id)
+                if run_id < 1:
+                    print("Error: --run-id must be positive integer or 'overwrite'")
+                    return
+            except ValueError:
+                print(f"Error: Invalid --run-id '{args.run_id}'. Use integer or 'overwrite'")
+                return
+
+    runner = CLIExperimentRunner(run_id=run_id)
 
     if args.list_models:
         runner.print_available_models()

@@ -19,14 +19,6 @@ class BaseCLIClient(ABC):
     """Abstract base class for CLI-based LLM clients"""
 
     def __init__(self, command: str, model: str = None, timeout: int = 300):
-        """
-        Initialize CLI client
-
-        Args:
-            command: CLI command to execute (e.g., 'codex', 'claude', 'copilot', 'gemini')
-            model: Model name to use (optional, model-specific)
-            timeout: Command timeout in seconds (default: 300s = 5min)
-        """
         self.command = command
         self.model = model
         self.timeout = timeout
@@ -34,45 +26,57 @@ class BaseCLIClient(ABC):
 
         logger.info(f"Initialized {self.__class__.__name__} with command='{command}', model='{model}'")
 
+    def send_prompts_sequential(self, prompts: list) -> tuple:
+        logger.info(f"🔄 Chain of Thought (CLI simulation): {len(prompts)} steps")
+        logger.info(f"   Building conversation context step-by-step...")
+
+        responses = []
+        conversation_history = ""
+        total_time = 0
+
+        for i, current_prompt in enumerate(prompts):
+            step_num = i + 1
+            logger.info(f"\n📝 Step {step_num}/{len(prompts)}")
+
+            if conversation_history:
+                full_input = f"{conversation_history}\n\n{current_prompt}"
+                logger.info(f"   Sending prompt with {len(conversation_history)} chars of history")
+            else:
+                full_input = current_prompt
+                logger.info(f"   Sending initial prompt ({len(current_prompt)} chars)")
+
+            import time as time_module
+            start = time_module.time()
+            response = self.send_prompt(full_input)
+            elapsed = time_module.time() - start
+            total_time += elapsed
+
+            if not response:
+                raise RuntimeError(f"CoT Step {step_num} failed - no response")
+
+            logger.info(f"   ✓ Step {step_num} completed in {elapsed:.2f}s ({len(response)} chars)")
+            responses.append(response)
+
+            conversation_history += f"{current_prompt}\n\n{response}\n\n"
+
+            if i < len(prompts) - 1:
+                time_module.sleep(1)
+
+        final_response = responses[-1] if responses else ""
+        logger.info(f"\n✅ Chain of Thought completed: {len(responses)} steps in {total_time:.2f}s")
+
+        return responses, final_response, total_time
+
     @abstractmethod
     def send_prompt(self, prompt: str, **kwargs) -> str:
-        """
-        Send prompt to CLI tool and get response
-
-        This is the main method that each CLI client must implement.
-        It should execute the CLI command with the prompt and return the response.
-
-        Args:
-            prompt: The prompt text to send to the LLM
-            **kwargs: Additional CLI-specific arguments
-
-        Returns:
-            Response text from the model
-
-        Raises:
-            RuntimeError: If the command fails after all retries
-            subprocess.TimeoutExpired: If the command times out
-        """
         pass
 
     @abstractmethod
     def check_installation(self) -> bool:
-        """
-        Check if CLI tool is installed and available
-
-        Returns:
-            True if CLI tool is installed, False otherwise
-        """
         pass
 
     @abstractmethod
     def check_authentication(self) -> bool:
-        """
-        Check if user is authenticated to use the CLI tool
-
-        Returns:
-            True if authenticated, False otherwise
-        """
         pass
 
     def execute_command(
@@ -82,33 +86,11 @@ class BaseCLIClient(ABC):
         max_retries: int = 3,
         env: Dict[str, str] = None
     ) -> subprocess.CompletedProcess:
-        """
-        Execute CLI command with retries and error handling
-
-        This method handles:
-        - Multiple retry attempts with exponential backoff
-        - Timeout handling
-        - Error logging
-        - Response time measurement
-
-        Args:
-            args: Command arguments as list (e.g., ['codex', '--stdin'])
-            input_text: Text to send to stdin (optional)
-            max_retries: Number of retry attempts (default: 3)
-            env: Environment variables dict (optional)
-
-        Returns:
-            Completed subprocess result
-
-        Raises:
-            RuntimeError: If all retry attempts fail
-        """
         for attempt in range(max_retries):
             try:
                 start_time = time.time()
                 logger.info(f"Executing command (attempt {attempt + 1}/{max_retries}): {' '.join(args)}")
 
-                # On Windows, use shell=True for better CMD/PowerShell compatibility
                 result = subprocess.run(
                     args,
                     input=input_text,
@@ -129,7 +111,7 @@ class BaseCLIClient(ABC):
                     logger.warning(
                         f"Attempt {attempt + 1} failed with return code {result.returncode}"
                     )
-                    logger.warning(f"stderr: {result.stderr}")  # Log full stderr for debugging
+                    logger.warning(f"stderr: {result.stderr}")
 
             except subprocess.TimeoutExpired:
                 logger.warning(f"Attempt {attempt + 1} timed out after {self.timeout}s")
@@ -141,7 +123,6 @@ class BaseCLIClient(ABC):
             except Exception as e:
                 logger.error(f"Attempt {attempt + 1} error: {e}")
 
-            # Exponential backoff between retries
             if attempt < max_retries - 1:
                 wait_time = 2 ** attempt
                 logger.info(f"Waiting {wait_time}s before retry...")
@@ -150,12 +131,6 @@ class BaseCLIClient(ABC):
         raise RuntimeError(f"All {max_retries} attempts failed for command: {' '.join(args)}")
 
     def get_version(self) -> Optional[str]:
-        """
-        Get version of the CLI tool
-
-        Returns:
-            Version string or None if unavailable
-        """
         try:
             result = subprocess.run(
                 [self.command, "--version"],
@@ -171,24 +146,15 @@ class BaseCLIClient(ABC):
             return None
 
     def cleanup(self):
-        """
-        Cleanup resources
-
-        For CLI clients, this is usually a no-op since subprocess handles cleanup.
-        Override this method if your client needs specific cleanup.
-        """
         logger.debug(f"Cleanup called for {self.__class__.__name__}")
         pass
 
     def __enter__(self):
-        """Context manager entry"""
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        """Context manager exit"""
         self.cleanup()
-        return False  # Don't suppress exceptions
+        return False
 
     def __repr__(self):
-        """String representation"""
         return f"{self.__class__.__name__}(command='{self.command}', model='{self.model}')"

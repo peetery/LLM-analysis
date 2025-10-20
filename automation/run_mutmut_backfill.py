@@ -491,7 +491,7 @@ def regenerate_markdown_summary(experiment_dir: Path):
     logger.info(f"✓ Regenerated {md_file}")
 
 
-def process_results_directory(results_dir: Path):
+def process_results_directory(results_dir: Path, run_id_filter: str = None):
     check_platform()
 
     mutants_dir = find_mutants_directory()
@@ -501,12 +501,24 @@ def process_results_directory(results_dir: Path):
 
     logger.info(f"Using mutants directory: {mutants_dir}")
 
+    if run_id_filter:
+        logger.info(f"Filtering for run ID: run_{run_id_filter}")
+
     experiment_dirs = []
     for test_file in results_dir.rglob("mutmut_test.py"):
-        experiment_dirs.append(test_file.parent)
+        exp_dir = test_file.parent
+
+        if run_id_filter:
+            if f"run_{run_id_filter}" not in str(exp_dir):
+                continue
+
+        experiment_dirs.append(exp_dir)
 
     if not experiment_dirs:
-        logger.warning(f"⚠️  No experiments found in {results_dir}")
+        if run_id_filter:
+            logger.warning(f"⚠️  No experiments found in {results_dir} for run_{run_id_filter}")
+        else:
+            logger.warning(f"⚠️  No experiments found in {results_dir}")
         return
 
     logger.info(f"Found {len(experiment_dirs)} experiments to process")
@@ -535,11 +547,31 @@ def process_results_directory(results_dir: Path):
 def main():
     import argparse
 
-    parser = argparse.ArgumentParser(description='Add mutmut results to existing experiments')
+    parser = argparse.ArgumentParser(
+        description='Add mutmut results to existing experiments (supports multi-run structure)',
+        epilog='''
+Examples:
+  # Process all experiments in cli_results
+  python3 run_mutmut_backfill.py --results-dir cli_results
+
+  # Process only run_001 experiments
+  python3 run_mutmut_backfill.py --results-dir cli_results --run-id 001
+
+  # Process only run_002 and run_003
+  python3 run_mutmut_backfill.py --results-dir cli_results --run-id 002
+  python3 run_mutmut_backfill.py --results-dir cli_results --run-id 003
+
+  # Process single experiment directory
+  python3 run_mutmut_backfill.py --experiment-dir cli_results/simple_prompting/interface/claude-code-sonnet-4.5/run_001
+        ''',
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument('--results-dir', default='cli_results',
                         help='Results directory to process (default: cli_results)')
     parser.add_argument('--experiment-dir',
                         help='Process single experiment directory')
+    parser.add_argument('--run-id', type=str, default=None,
+                        help='Filter by run ID (e.g., "001" for run_001, "002" for run_002)')
 
     args = parser.parse_args()
 
@@ -562,7 +594,7 @@ def main():
             logger.error(f"❌ Results directory not found: {results_dir}")
             sys.exit(1)
 
-        process_results_directory(results_dir)
+        process_results_directory(results_dir, run_id_filter=args.run_id)
 
 
 if __name__ == "__main__":

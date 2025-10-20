@@ -10,10 +10,6 @@ Authentication:
 
 Models available:
     - claude-sonnet-4.5: Latest Sonnet (recommended)
-
-Usage:
-    client = ClaudeCodeClient(model="claude-sonnet-4.5")
-    response = client.send_prompt("Write unit tests for...")
 """
 
 import subprocess
@@ -22,7 +18,6 @@ import logging
 import platform
 import time
 import json
-import re
 from pathlib import Path
 
 from .base_cli_client import BaseCLIClient
@@ -170,9 +165,17 @@ class ClaudeCodeClient(BaseCLIClient):
                     result_text = response_data.get("result", "")
 
                     if result_text:
-                        code_blocks = re.findall(r'```python\n(.*?)\n```', result_text, re.DOTALL)
-                        if code_blocks:
-                            return '\n\n'.join(code_blocks)
+                        logger.info(f"Received Claude response ({len(result_text)} chars)")
+
+                        if '```python' in result_text:
+                            logger.info("✓ Response contains ```python code blocks")
+                        elif '```' in result_text:
+                            logger.info("✓ Response contains generic ``` code blocks")
+                        elif 'import unittest' in result_text or 'def test' in result_text:
+                            logger.info("✓ Response appears to be raw Python code")
+                        else:
+                            logger.warning("⚠️ Response doesn't appear to contain code")
+
                         return result_text
 
                     permission_denials = response_data.get("permission_denials", [])
@@ -186,10 +189,12 @@ class ClaudeCodeClient(BaseCLIClient):
                                     return content
 
                     logger.error(f"No result or code found in response")
-                    logger.error(f"Response: {response_data}")
+                    logger.error(f"Response keys: {response_data.keys()}")
+                    logger.error(f"Response type: {response_data.get('type')}")
                     raise RuntimeError("No code generated in Claude response")
                 else:
                     logger.error(f"Unexpected response type: {response_data.get('type')}")
+                    logger.error(f"Full response: {json.dumps(response_data, indent=2)[:1000]}")
                     raise RuntimeError("Failed to extract result from Claude response")
 
             except json.JSONDecodeError as e:
@@ -198,7 +203,6 @@ class ClaudeCodeClient(BaseCLIClient):
                 raise RuntimeError(f"Invalid JSON response from Claude: {e}")
 
         finally:
-            # Clean up temporary file
             Path(prompt_file).unlink(missing_ok=True)
 
     def set_model(self, model: str):

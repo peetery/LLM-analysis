@@ -1,122 +1,181 @@
-# LLM Testing Automation System
+# LLM Test Generation Automation
 
-System automatyzacji testowania modeli językowych do generowania testów jednostkowych.
+Automated system for evaluating LLM-generated unit tests using different prompting strategies and code contexts.
 
-## Instalacja
+## 📁 Directory Structure
 
-1. Zainstaluj wymagane pakiety:
-```bash
-pip install -r requirements.txt
+```
+automation/
+├── web_automation/              # Web-based automation (Selenium)
+│   ├── base_llm_client.py      # Base Selenium client
+│   ├── openai_client.py        # ChatGPT automation
+│   ├── anthropic_client.py     # Claude.ai automation
+│   ├── deepseek_client.py      # DeepSeek automation
+│   ├── google_client.py        # Gemini automation
+│   └── huggingface_client.py   # HuggingFace automation
+├── cli_automation/              # CLI-based automation (subprocess)
+│   ├── base_cli_client.py      # Base CLI client
+│   └── claude_code_client.py   # Claude Code CLI client
+├── docs/                        # Documentation
+│   ├── CLI_AUTOMATION.md       # CLI automation guide
+│   ├── MUTATION_TESTING.md     # Mutation testing guide
+│   ├── WSL_SETUP.md            # WSL configuration
+│   ├── WSL_CHROME_SETUP.md     # Chrome debugging setup
+│   └── archive/                # Historical documentation
+├── prompts_results/             # Web automation results
+├── cli_results/                 # CLI automation results
+├── experiment_runner.py         # Core experiment orchestration
+├── prompt_strategies.py         # Prompting strategies
+├── run_experiments.py           # Web automation entry point
+├── cli_experiment_runner.py    # CLI automation entry point
+├── run_mutmut_backfill.py      # Mutation testing backfill (Windows→WSL)
+├── experiment_config.json       # Web automation config
+├── cli_config.json             # CLI automation config
+└── requirements.txt            # Python dependencies
 ```
 
-2. Zainstaluj ChromeDriver (automatycznie przez webdriver-manager)
+## 🚀 Quick Start
 
-## Użycie
+### CLI Automation (Recommended)
 
-### Pojedynczy eksperyment
+**List available models:**
 ```bash
-python run_experiments.py --model gpt-4.5 --strategy simple_prompting --context interface
+cd automation
+python cli_experiment_runner.py --list-models
 ```
 
-### Batch eksperymenty
+**Run single experiment:**
 ```bash
-python run_experiments.py --config experiment_config.json
+python cli_experiment_runner.py \
+  --model claude-code-sonnet-4.5 \
+  --strategy simple_prompting \
+  --context interface
 ```
 
-### Tryb interaktywny
+**Run batch experiments:**
+```bash
+python cli_experiment_runner.py --config cli_config.json
+```
+
+See [docs/CLI_AUTOMATION.md](docs/CLI_AUTOMATION.md) for details.
+
+### Web Automation (Legacy)
+
+**Interactive mode:**
 ```bash
 python run_experiments.py
 ```
 
-## Parametry
-
-- `--model`: Nazwa modelu (gpt-4.5, claude-3.7-sonnet, etc.)
-- `--strategy`: Strategia promptowania (simple_prompting, chain_of_thought_prompting)
-- `--context`: Poziom kontekstu kodu (interface, interface_docstring, full_context)
-- `--headless`: Uruchom przeglądarkę w trybie headless
-- `--no-headless`: Uruchom przeglądarkę z GUI (domyślne)
-
-## Obsługiwane modele
-
-### Zaimplementowane:
-- GPT-4.5, GPT-o3, GPT-o4-mini-high (ChatGPT)
-- Claude 3.7 Sonnet (Claude.ai)
-
-### Do implementacji:
-- Deepseek
-- Gemini 2.5 Pro
-
-## Struktura wyników
-
-Każdy eksperyment tworzy:
-```
-prompts_results/
-├── [strategy]/
-    ├── [context]/
-        ├── [model]/
-            ├── tests.py                    # Wygenerowane testy
-            ├── mutmut_test.py             # Kopia dla mutation testing
-            ├── experiment_results.json    # Wyniki eksperymentu
-            ├── analysis_results.json      # Wyniki analizy
-            ├── htmlcov/                   # Raport coverage
-            ├── mutmut-stats.json         # Statystyki mutation testing
-            └── mutmut_results.txt        # Wyniki mutation testing
-```
-
-## Mierzone metryki
-
-1. **Czas odpowiedzi** - dla każdego promptu
-2. **Compilation success rate** - czy testy się kompilują
-3. **Code coverage** - pokrycie kodu przez testy
-4. **Mutation score** - skuteczność wykrywania mutacji
-5. **Liczba testów** - ilość wygenerowanych metod testowych
-
-## Strategie promptowania
-
-### Simple Prompting
-Jeden prompt z bezpośrednim żądaniem wygenerowania testów.
-
-### Chain-of-Thought Prompting
-Trzy kroki:
-1. Analiza kodu i identyfikacja scenariuszy
-2. Planowanie strategii testowej
-3. Implementacja testów
-
-## Poziomy kontekstu
-
-1. **Interface** - tylko sygnatury metod
-2. **Interface + Docstring** - sygnatury z dokumentacją
-3. **Full Context** - pełny kod źródłowy
-
-## Logowanie
-
-Logi zapisywane w `automation.log` oraz wyświetlane w konsoli.
-
-## Przykłady użycia
-
-### Test pojedynczego modelu
+**Single experiment:**
 ```bash
-# Claude z chain-of-thought i pełnym kontekstem
-python run_experiments.py --model claude-3.7-sonnet --strategy chain_of_thought_prompting --context full_context
-
-# GPT z prostym promptowaniem i interfejsem
-python run_experiments.py --model gpt-4.5 --strategy simple_prompting --context interface
+python run_experiments.py \
+  --model gpt-4.5 \
+  --strategy simple_prompting \
+  --context interface \
+  --no-headless
 ```
 
-### Batch testing
+**Batch experiments:**
 ```bash
-# Uruchom wszystkie eksperymenty z pliku konfiguracyjnego
-python run_experiments.py --config experiment_config.json --headless
+python run_experiments.py --config experiment_config.json --no-headless
 ```
 
-## Rozszerzanie systemu
+## 🧪 Mutation Testing
 
-### Dodawanie nowego modelu:
-1. Stwórz klasę klienta dziedziczącą z `BaseLLMClient`
-2. Zaimplementuj metody: `login()`, `send_prompt()`, `get_selectors()`
-3. Dodaj do `model_clients` w `ExperimentRunner`
+**On Windows:** Mutation testing is automatically skipped (requires fork support).
 
-### Dodawanie nowej strategii:
-1. Stwórz klasę dziedziczącą z `PromptStrategy`
-2. Zaimplementuj metodę `execute()`
-3. Dodaj do `ExperimentRunner.run_single_experiment()`
+**Backfill from WSL/Linux:**
+```bash
+# From WSL
+cd /mnt/c/Users/.../LLM-analysis/automation
+python3 run_mutmut_backfill.py --results-dir cli_results
+```
+
+See [docs/MUTATION_TESTING.md](docs/MUTATION_TESTING.md) for details.
+
+## 📊 Results Structure
+
+Results are organized by automation type:
+
+**Web automation:** `prompts_results/{strategy}/{context}/{model}/`
+**CLI automation:** `cli_results/{strategy}/{context}/{model}/`
+
+Each result directory contains:
+- `tests.py` - Generated test code
+- `mutmut_test.py` - Filtered tests for mutation testing
+- `order_calculator.py` - Source code under test
+- `experiment_results.json` - Experiment metadata
+- `analysis_results.json` - Coverage, mutation, quality metrics
+- `podsumowanie-{model}.md` - Human-readable summary
+- `htmlcov/` - Coverage report
+
+## 🔧 Prompting Strategies
+
+**Simple Prompting:** Single prompt requesting tests
+**Chain of Thought:** Three-step process (analyze → plan → implement)
+
+## 📝 Context Levels
+
+- **interface:** Method signatures only
+- **interface_docstring:** Signatures + docstrings
+- **full_context:** Complete implementation
+
+## 🛠️ Development
+
+**Install dependencies:**
+```bash
+pip install -r requirements.txt
+```
+
+**Web automation requirements:**
+- Chrome with remote debugging (`--remote-debugging-port=9222`)
+- Active browser sessions with logged-in LLM accounts
+
+**CLI automation requirements:**
+- Claude Code: Already installed (you're using it!)
+- OpenAI Codex: `npm install -g @openai/codex`
+- GitHub Copilot: `npm install -g @github/copilot`
+- Google Gemini: `npm install -g @google/gemini-cli`
+
+## 📚 Documentation
+
+- [CLI Automation Guide](docs/CLI_AUTOMATION.md)
+- [Mutation Testing Guide](docs/MUTATION_TESTING.md)
+- [WSL Setup](docs/WSL_SETUP.md)
+- [Chrome Debug Setup](docs/WSL_CHROME_SETUP.md)
+- [Historical Documentation](docs/archive/)
+
+## 🎯 Research Metrics
+
+The system automatically measures:
+- **Compilation success rate**
+- **Statement coverage** (line coverage)
+- **Branch coverage** (decision coverage)
+- **Mutation score** (% mutants killed)
+- **Test count** (methods generated)
+- **Test success rate** (passing vs total)
+- **Test quality metrics** (assertions, error handling, duplicates)
+- **Code smells** (independence, naming, complexity)
+
+All metrics saved in JSON, CSV, and Markdown formats.
+
+## ⚠️ Important Notes
+
+### File Locations
+- Run all scripts from `automation/` directory
+- `order_calculator.py` is in repository root
+- Results stay in `prompts_results/` and `cli_results/`
+
+### Mutation Testing
+- **Requires WSL/Linux** (fork support needed)
+- Use `run_mutmut_backfill.py` to add mutation results later
+- Automatically filters to passing tests only
+
+### Web Automation
+- Always use `--no-headless` for monitoring
+- Login state persists across experiments
+- Manual intervention possible during execution
+
+## 📄 License
+
+Research project - see repository root for license.

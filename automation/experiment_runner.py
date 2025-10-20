@@ -1,6 +1,3 @@
-"""
-Main LLM experiments orchestrator
-"""
 import json
 import time
 import subprocess
@@ -9,10 +6,10 @@ from pathlib import Path
 from datetime import datetime
 import shutil
 
-from openai_client import OpenAIClient
-from anthropic_client import AnthropicClient
-from deepseek_client import DeepseekClient
-from google_client import GoogleClient
+from web_automation.openai_client import OpenAIClient
+from web_automation.anthropic_client import AnthropicClient
+from web_automation.deepseek_client import DeepseekClient
+from web_automation.google_client import GoogleClient
 from prompt_strategies import SimplePrompting, ChainOfThoughtPrompting
 
 logging.basicConfig(level=logging.INFO)
@@ -99,7 +96,7 @@ class ExperimentRunner:
                     logger.error("Strategy execution failed")
                     return None
                 
-                actual_model_used = model_name  # Default
+                actual_model_used = model_name
                 if hasattr(llm_client, 'get_current_model'):
                     detected_model = llm_client.get_current_model()
                     if detected_model and detected_model != "unknown":
@@ -123,13 +120,14 @@ class ExperimentRunner:
     
     def save_experiment_results(self, result_dir, strategy_result, model_name, strategy_name, context_type):
         timestamp = datetime.now().isoformat()
-        
+
         if strategy_name == "simple_prompting":
             test_code = self.extract_test_code(strategy_result['response'])
             response_time = strategy_result['response_time']
-        else:
-            test_code = self.extract_test_code(strategy_result['final_response'])
-            response_time = strategy_result['total_response_time']
+        else:  # chain_of_thought_prompting
+            response_text = strategy_result.get('final_response') or strategy_result.get('response', '')
+            test_code = self.extract_test_code(response_text)
+            response_time = strategy_result.get('total_response_time', 0)
         
         if not test_code:
             logger.error("Failed to extract test code from response")
@@ -138,21 +136,21 @@ class ExperimentRunner:
         tests_file = result_dir / "tests.py"
         tests_file.write_text(test_code)
 
-        mutmut_test_file = result_dir / "mutmut_test.py"
-        self.create_filtered_test_file(tests_file, mutmut_test_file)
-        
         source_file = Path("../order_calculator.py")
         if not source_file.exists():
             source_file = Path("../../order_calculator.py")
         if not source_file.exists():
             source_file = Path("order_calculator.py")
-            
+
         if source_file.exists():
             dest_file = result_dir / "order_calculator.py"
             shutil.copy2(source_file, dest_file)
             logger.info(f"✓ Copied {source_file} to test directory")
         else:
             logger.error("✗ order_calculator.py not found - tests will fail")
+
+        mutmut_test_file = result_dir / "mutmut_test.py"
+        self.create_filtered_test_file(tests_file, mutmut_test_file)
         
         experiment_data = {
             'model': model_name,
@@ -278,7 +276,10 @@ class ExperimentRunner:
 
     def extract_test_code(self, response_text):
         import re
-        
+
+        logger.info(f"Extracting test code from response ({len(response_text)} chars)")
+        logger.debug(f"First 300 chars: {response_text[:300]}")
+
         def clean_code_block(code):
             lines = code.split('\n')
             cleaned_lines = []
@@ -311,31 +312,41 @@ class ExperimentRunner:
         
         code_blocks = re.findall(r'```python\n(.*?)\n```', response_text, re.DOTALL)
         if code_blocks:
-            return clean_code_block(code_blocks[0])
-        
+            logger.info(f"✓ Found {len(code_blocks)} python code blocks")
+            extracted = clean_code_block(code_blocks[0])
+            logger.info(f"✓ Extracted {len(extracted)} chars of test code")
+            return extracted
+
         code_blocks = re.findall(r'```\n(.*?)\n```', response_text, re.DOTALL)
         if code_blocks:
+            logger.info(f"Found {len(code_blocks)} generic code blocks, searching for test code...")
             for block in code_blocks:
                 cleaned_block = clean_code_block(block)
                 if 'unittest' in cleaned_block or 'def test' in cleaned_block:
+                    logger.info(f"✓ Found test code in generic block ({len(cleaned_block)} chars)")
                     return cleaned_block
         
+        logger.warning("No markdown code blocks found, trying fallback extraction...")
         lines = response_text.split('\n')
         code_start = None
-        
+
         for i, line in enumerate(lines):
             line_stripped = line.strip()
-            if (line_stripped.startswith('import ') or 
-                line_stripped.startswith('from ') or 
+            if (line_stripped.startswith('import ') or
+                line_stripped.startswith('from ') or
                 (line_stripped.startswith('class ') and 'Test' in line_stripped)):
                 code_start = i
                 break
-        
+
         if code_start is not None:
+            logger.info(f"✓ Found code start at line {code_start} (fallback method)")
             code_lines = lines[code_start:]
             code = '\n'.join(code_lines)
-            return clean_code_block(code)
-        
+            extracted = clean_code_block(code)
+            logger.info(f"✓ Extracted {len(extracted)} chars of test code (fallback)")
+            return extracted
+
+        logger.error("✗ Failed to extract any test code from response")
         return None
     
     def run_analysis(self, result_dir, experiment_data):
