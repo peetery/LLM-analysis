@@ -194,7 +194,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
 
         logger.info("Running mutmut... (this may take 5-10 minutes)")
         run_result = subprocess.run(
-            ['python3', '-m', 'mutmut', 'run'],
+            ['mutmut', 'run'],
             cwd=mutants_dir,
             capture_output=True,
             text=True,
@@ -208,7 +208,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
             logger.warning(f"⚠️  Mutmut run returned code {run_result.returncode}")
 
         results_result = subprocess.run(
-            ['python3', '-m', 'mutmut', 'results'],
+            ['mutmut', 'results'],
             cwd=mutants_dir,
             capture_output=True,
             text=True
