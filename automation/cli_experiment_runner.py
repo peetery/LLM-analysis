@@ -3,7 +3,8 @@ import json
 from pathlib import Path
 
 from cli_automation import (
-    ClaudeCodeClient
+    ClaudeCodeClient,
+    GeminiCLIClient
 )
 
 from experiment_runner import ExperimentRunner
@@ -20,7 +21,12 @@ class CLIExperimentRunner:
         self.run_id = run_id
 
         self.cli_clients = {
+            # Claude Code models
             'claude-code-sonnet-4.5': lambda: ClaudeCodeClient(model="claude-sonnet-4.5"),
+
+            # Gemini CLI models
+            'gemini-2.5-pro': lambda: GeminiCLIClient(model="gemini-2.5-pro"),
+            'gemini-2.5-flash': lambda: GeminiCLIClient(model="gemini-2.5-flash"),
         }
 
         logger.info(f"CLI Experiment Runner initialized with {len(self.cli_clients)} models")
