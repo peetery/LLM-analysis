@@ -10,6 +10,7 @@ import subprocess
 import time
 import logging
 import platform
+import time as time_module
 from typing import Optional, Dict, Any
 
 logger = logging.getLogger(__name__)
@@ -36,6 +37,7 @@ class BaseCLIClient(ABC):
 
         for i, current_prompt in enumerate(prompts):
             step_num = i + 1
+            is_final_step = (i == len(prompts) - 1)
             logger.info(f"\n📝 Step {step_num}/{len(prompts)}")
 
             if conversation_history:
@@ -45,9 +47,9 @@ class BaseCLIClient(ABC):
                 full_input = current_prompt
                 logger.info(f"   Sending initial prompt ({len(current_prompt)} chars)")
 
-            import time as time_module
             start = time_module.time()
-            response = self.send_prompt(full_input)
+
+            response = self.send_prompt(full_input, is_final_step=is_final_step)
             elapsed = time_module.time() - start
             total_time += elapsed
 

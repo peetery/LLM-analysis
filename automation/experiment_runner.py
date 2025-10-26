@@ -2,6 +2,8 @@ import json
 import time
 import subprocess
 import logging
+import re
+import ast
 from pathlib import Path
 from datetime import datetime
 import shutil
@@ -170,9 +172,6 @@ class ExperimentRunner:
         return experiment_data
 
     def create_filtered_test_file(self, source_test_file, target_test_file):
-        import ast
-        import re
-
         try:
             result = subprocess.run(
                 ['python', '-m', 'unittest', source_test_file.stem, '-v'],
@@ -275,57 +274,64 @@ class ExperimentRunner:
         return '\n'.join(filtered_lines)
 
     def extract_test_code(self, response_text):
-        import re
-
         logger.info(f"Extracting test code from response ({len(response_text)} chars)")
         logger.debug(f"First 300 chars: {response_text[:300]}")
 
         def clean_code_block(code):
             lines = code.split('\n')
             cleaned_lines = []
-            
+
             for line in lines:
                 original_line = line
                 line_stripped = line.strip()
-                
+
                 ui_artifacts = [
                     'python', 'kopiuj', 'edytuj', 'copy', 'edit', 'skopiuj',
                     'bash', 'shell', 'powershell', 'cmd', 'javascript', 'js',
                     'html', 'css', 'sql', 'json', 'xml', 'yaml'
                 ]
-                
+
                 if line_stripped.lower() in ui_artifacts:
                     continue
-                    
+
                 if line_stripped.startswith('```'):
                     continue
-                    
+
                 if not cleaned_lines and not line_stripped:
                     continue
-                    
+
                 cleaned_lines.append(original_line)
-            
+
             while cleaned_lines and not cleaned_lines[-1].strip():
                 cleaned_lines.pop()
-                
-            return '\n'.join(cleaned_lines)
-        
-        code_blocks = re.findall(r'```python\n(.*?)\n```', response_text, re.DOTALL)
-        if code_blocks:
-            logger.info(f"✓ Found {len(code_blocks)} python code blocks")
-            extracted = clean_code_block(code_blocks[0])
-            logger.info(f"✓ Extracted {len(extracted)} chars of test code")
-            return extracted
 
-        code_blocks = re.findall(r'```\n(.*?)\n```', response_text, re.DOTALL)
+            return '\n'.join(cleaned_lines)
+
+        code_blocks = re.findall(r'```python\n(.*?)\n```', response_text, re.DOTALL)
+        if not code_blocks:
+            code_blocks = re.findall(r'```\n(.*?)\n```', response_text, re.DOTALL)
+
         if code_blocks:
-            logger.info(f"Found {len(code_blocks)} generic code blocks, searching for test code...")
+            logger.info(f"✓ Found {len(code_blocks)} code blocks")
+
+            for i, block in enumerate(code_blocks):
+                cleaned_block = clean_code_block(block)
+                smart_result = self._extract_tests_smart(cleaned_block)
+
+                if smart_result:
+                    logger.info(f"✓ Smart extraction successful from block {i+1}")
+                    logger.info(f"✓ Extracted {len(smart_result)} chars of test code")
+                    return smart_result
+
             for block in code_blocks:
                 cleaned_block = clean_code_block(block)
                 if 'unittest' in cleaned_block or 'def test' in cleaned_block:
-                    logger.info(f"✓ Found test code in generic block ({len(cleaned_block)} chars)")
-                    return cleaned_block
-        
+                    logger.warning("⚠️ Smart extraction failed, using fallback")
+                    return self._ensure_imports(cleaned_block)
+
+            logger.warning("⚠️ No unittest found, using first block")
+            return self._ensure_imports(clean_code_block(code_blocks[0]))
+
         logger.warning("No markdown code blocks found, trying fallback extraction...")
         lines = response_text.split('\n')
         code_start = None
@@ -344,10 +350,86 @@ class ExperimentRunner:
             code = '\n'.join(code_lines)
             extracted = clean_code_block(code)
             logger.info(f"✓ Extracted {len(extracted)} chars of test code (fallback)")
-            return extracted
+            return self._ensure_imports(extracted)
 
         logger.error("✗ Failed to extract any test code from response")
         return None
+
+    def _extract_tests_smart(self, code_text):
+        try:
+            tree = ast.parse(code_text)
+        except SyntaxError:
+            logger.debug("Code is not valid Python, skipping smart extraction")
+            return None
+
+        imports = []
+        test_classes = []
+        has_ordercalculator_import = False
+
+        for node in tree.body:
+            if isinstance(node, (ast.Import, ast.ImportFrom)):
+                imports.append(node)
+                if isinstance(node, ast.ImportFrom):
+                    if node.module == 'order_calculator':
+                        for alias in node.names:
+                            if alias.name == 'OrderCalculator':
+                                has_ordercalculator_import = True
+                elif isinstance(node, ast.Import):
+                    for alias in node.names:
+                        if alias.name == 'order_calculator':
+                            has_ordercalculator_import = True
+
+            elif isinstance(node, ast.ClassDef):
+                if node.name.startswith('Test'):
+                    test_classes.append(node)
+                    logger.debug(f"Found test class: {node.name}")
+                elif node.name in ['OrderCalculator', 'Item']:
+                    logger.debug(f"Skipping implementation class: {node.name}")
+                else:
+                    test_classes.append(node)
+
+        if not test_classes:
+            logger.debug("No test classes found in this block")
+            return None
+
+        new_tree = ast.Module(body=imports + test_classes, type_ignores=[])
+
+        try:
+            code = ast.unparse(new_tree)
+        except AttributeError:
+            logger.warning("ast.unparse not available, using fallback")
+            return None
+
+        if not has_ordercalculator_import:
+            logger.info("✓ Auto-adding missing OrderCalculator import")
+            code = "from order_calculator import OrderCalculator, Item\n\n" + code
+
+        return code
+
+    def _ensure_imports(self, code_text):
+        has_import = (
+            re.search(r'from\s+order_calculator\s+import.*OrderCalculator', code_text) or
+            re.search(r'import\s+order_calculator', code_text)
+        )
+
+        if not has_import:
+            logger.info("✓ Auto-adding missing OrderCalculator import (fallback)")
+            lines = code_text.split('\n')
+
+            last_import_idx = -1
+            for i, line in enumerate(lines):
+                if line.strip().startswith(('import ', 'from ')):
+                    last_import_idx = i
+
+            if last_import_idx >= 0:
+                lines.insert(last_import_idx + 1, 'from order_calculator import OrderCalculator, Item')
+            else:
+                lines.insert(0, 'from order_calculator import OrderCalculator, Item')
+                lines.insert(1, '')
+
+            code_text = '\n'.join(lines)
+
+        return code_text
     
     def run_analysis(self, result_dir, experiment_data):
         tests_file = Path(experiment_data['test_file'])
@@ -560,8 +642,6 @@ class ExperimentRunner:
             return None
     
     def parse_mutmut_results(self, mutmut_output):
-        import re
-        
         stats = {
             'total_mutants': 0,
             'killed': 0,
@@ -781,8 +861,6 @@ class ExperimentRunner:
         }
     
     def detect_tested_methods(self, test_content):
-        import re
-
         known_methods = [
             '__init__', 'add_item', 'remove_item', 'get_subtotal',
             'apply_discount', 'calculate_shipping', 'calculate_tax',
@@ -810,8 +888,6 @@ class ExperimentRunner:
         }
 
     def detect_duplicate_tests(self, tests_file):
-        import ast
-
         try:
             test_content = tests_file.read_text()
             tree = ast.parse(test_content)
@@ -909,8 +985,6 @@ class ExperimentRunner:
         return (call_similarity * 0.5) + (assert_similarity * 0.3) + (lit_similarity * 0.2)
 
     def analyze_assertion_quality(self, tests_file):
-        import ast
-
         try:
             test_content = tests_file.read_text()
             tree = ast.parse(test_content)
@@ -966,8 +1040,6 @@ class ExperimentRunner:
             }
 
     def analyze_exception_testing_quality(self, tests_file):
-        import ast
-
         try:
             test_content = tests_file.read_text()
             tree = ast.parse(test_content)
@@ -1016,8 +1088,6 @@ class ExperimentRunner:
             }
 
     def analyze_test_independence(self, tests_file):
-        import ast
-
         try:
             test_content = tests_file.read_text()
             tree = ast.parse(test_content)
@@ -1075,8 +1145,6 @@ class ExperimentRunner:
             }
 
     def analyze_test_naming_quality(self, tests_file):
-        import ast
-
         try:
             test_content = tests_file.read_text()
             tree = ast.parse(test_content)
@@ -1144,8 +1212,6 @@ class ExperimentRunner:
             }
 
     def detect_code_smells(self, tests_file):
-        import ast
-
         try:
             test_content = tests_file.read_text()
             tree = ast.parse(test_content)

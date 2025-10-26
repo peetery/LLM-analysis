@@ -53,7 +53,6 @@ class GeminiCLIClient(BaseCLIClient):
 
         model = actual_model
 
-        # On Windows, npm global installs create .cmd files
         command = "gemini.cmd" if platform.system() == "Windows" else "gemini"
 
         super().__init__(command=command, model=model, timeout=timeout)
@@ -121,20 +120,20 @@ class GeminiCLIClient(BaseCLIClient):
 
         Args:
             prompt: The prompt text
-            **kwargs: Additional arguments (not used currently)
-
-        Returns:
-            Model response text
-
-        Raises:
-            RuntimeError: If command fails after retries
+            **kwargs: Additional arguments
+                - is_final_step: bool - if True, adds instruction to return code (for CoT)
         """
         logger.info(f"Sending prompt to Gemini CLI ({len(prompt)} chars)")
 
-        # Add instruction to return code in response, not create files
-        enhanced_prompt = f"""{prompt}
+        is_final_step = kwargs.get('is_final_step', True)
+
+        if is_final_step:
+            enhanced_prompt = f"""{prompt}
 
 IMPORTANT: Return the complete code in your response. Do NOT use write_file, edit_file, or any other tools. Just provide the code directly in your answer."""
+        else:
+            enhanced_prompt = prompt
+            logger.debug("Skipping 'return code' instruction (not final step)")
 
         start_time = time.time()
 
