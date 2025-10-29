@@ -186,7 +186,7 @@ class CLIExperimentRunner:
         return list(self.cli_clients.keys())
 
     def print_available_models(self):
-        print("\n📋 Available CLI Models:")
+        print("\nAvailable CLI Models:")
         print("="*60)
 
         groups = {

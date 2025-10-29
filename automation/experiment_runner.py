@@ -1,5 +1,4 @@
 import json
-import time
 import subprocess
 import logging
 import re
@@ -7,12 +6,6 @@ import ast
 from pathlib import Path
 from datetime import datetime
 import shutil
-
-from web_automation.openai_client import OpenAIClient
-from web_automation.anthropic_client import AnthropicClient
-from web_automation.deepseek_client import DeepseekClient
-from web_automation.google_client import GoogleClient
-from prompt_strategies import SimplePrompting, ChainOfThoughtPrompting
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -22,103 +15,6 @@ class ExperimentRunner:
     def __init__(self, base_results_dir="prompts_results"):
         self.base_results_dir = Path(base_results_dir)
         self.current_experiment = None
-        
-        self.model_clients = {
-            'gpt-4': OpenAIClient,
-            'gpt-4.5': OpenAIClient,
-            'gpt-o3': OpenAIClient,
-            'gpt-o4-mini-high': OpenAIClient,
-            'claude-3.7-sonnet': AnthropicClient,
-            'deepseek': DeepseekClient,
-            'gemini-2.5-pro': GoogleClient
-        }
-    
-    def run_single_experiment(self, model_name, strategy_name, context_type, headless=True):
-        logger.info(f"Starting experiment: {model_name} - {strategy_name} - {context_type}")
-        
-        if model_name not in self.model_clients or self.model_clients[model_name] is None:
-            logger.error(f"Model {model_name} not supported yet")
-            return None
-        
-        result_dir = self.base_results_dir / strategy_name / context_type / model_name
-        result_dir.mkdir(parents=True, exist_ok=True)
-        
-        client_class = self.model_clients[model_name]
-        
-        try:
-            llm_client = client_class(model_name=model_name, headless=headless, attach_to_existing=True, debug_port=9222)
-            
-            with llm_client:
-                model_urls = {
-                    'gpt-4.5': 'https://chatgpt.com/?model=gpt-4.5',
-                    'gpt-o3': 'https://chatgpt.com/?model=o3',
-                    'gpt-o4-mini-high': 'https://chatgpt.com/?model=o4-mini-high',
-                    'claude-3.7-sonnet': 'https://claude.ai/',
-                    'deepseek': 'https://chat.deepseek.com/',
-                    'gemini-2.5-pro': 'https://gemini.google.com/'
-                }
-                
-                target_url = model_urls.get(model_name, 'https://google.com')
-                logger.info(f"📍 Navigating to {target_url} for model: {model_name}")
-                llm_client.driver.get(target_url)
-                time.sleep(5)
-                
-                if not llm_client.login():
-                    logger.error("Failed to login")
-                    return None
-                
-                if hasattr(llm_client, 'get_current_model'):
-                    final_model = llm_client.get_current_model()
-                    logger.info(f"🎯 Final model verification: {final_model} (expected: {model_name})")
-                    
-                    if hasattr(llm_client, 'is_correct_model') and hasattr(llm_client, 'get_target_model_name'):
-                        target_variants = llm_client.get_target_model_name()
-                        if not llm_client.is_correct_model(final_model, target_variants):
-                            logger.error(f"❌ CRITICAL: WRONG MODEL! Expected: {target_variants}, Got: {final_model}")
-                            logger.error(f"❌ CRITICAL: Experiment results will be INVALID for {model_name}!")
-                            logger.error(f"❌ CRITICAL: ChatGPT auto-switched models - this is a known issue.")
-                            
-                            logger.warning(f"⚠️  CONTINUING with wrong model - results will be labeled as {final_model} not {model_name}")
-                        else:
-                            logger.info(f"✅ SUCCESS: Correct model confirmed: {final_model}")
-                
-                if strategy_name == "simple_prompting":
-                    strategy = SimplePrompting()
-                elif strategy_name == "chain_of_thought_prompting":
-                    strategy = ChainOfThoughtPrompting()
-                else:
-                    logger.error(f"Unknown strategy: {strategy_name}")
-                    return None
-                
-                llm_client.start_new_chat()
-                
-                strategy_result = strategy.execute(llm_client, context_type)
-                
-                if not strategy_result:
-                    logger.error("Strategy execution failed")
-                    return None
-                
-                actual_model_used = model_name
-                if hasattr(llm_client, 'get_current_model'):
-                    detected_model = llm_client.get_current_model()
-                    if detected_model and detected_model != "unknown":
-                        actual_model_used = detected_model
-                        logger.info(f"📝 Recording actual model used: {actual_model_used}")
-                
-                experiment_results = self.save_experiment_results(
-                    result_dir, strategy_result, actual_model_used, strategy_name, context_type
-                )
-                
-                analysis_results = self.run_analysis(result_dir, experiment_results)
-                
-                return {
-                    'experiment': experiment_results,
-                    'analysis': analysis_results
-                }
-                
-        except Exception as e:
-            logger.error(f"Experiment failed: {e}")
-            return None
     
     def save_experiment_results(self, result_dir, strategy_result, model_name, strategy_name, context_type):
         timestamp = datetime.now().isoformat()
@@ -694,67 +590,6 @@ class ExperimentRunner:
                         stats['survived'] = int(survived_match.group(1))
         
         return stats
-    
-    
-    def run_batch_experiments(self, config_file):
-        with open(config_file) as f:
-            config = json.load(f)
-        
-        results = []
-        current_client = None
-        current_model = None
-        
-        new_chat_per_experiment = config.get('new_chat_per_experiment', True)
-        
-        for i, experiment in enumerate(config['experiments']):
-            model = experiment['model']
-            strategy = experiment['strategy']
-            context = experiment['context']
-            
-            logger.info(f"Running experiment {i+1}/{len(config['experiments'])}: {model} - {strategy} - {context}")
-            
-            if new_chat_per_experiment and current_client and current_model == model:
-                logger.info("🔄 Starting new chat for same model...")
-                try:
-                    if hasattr(current_client, 'start_new_chat'):
-                        current_client.start_new_chat()
-                        time.sleep(3)
-                        logger.info("✅ New chat started successfully")
-                    else:
-                        logger.warning("⚠️  Model doesn't support new chat - using same conversation")
-                except Exception as e:
-                    logger.warning(f"⚠️  Failed to start new chat: {e} - using same conversation")
-            
-            result = self.run_single_experiment(
-                model, strategy, context, 
-                headless=config.get('headless', True)
-            )
-            
-            if result:
-                results.append(result)
-                logger.info(f"✅ Experiment {i+1} completed successfully")
-                
-                if i < len(config['experiments']) - 1:
-                    next_model = config['experiments'][i+1]['model']
-                    if next_model == model:
-                        client_class = self.model_clients[model]
-                        current_model = model
-                        logger.info(f"📝 Next experiment uses same model ({model}) - will reuse connection")
-                    else:
-                        current_client = None
-                        current_model = None
-            else:
-                logger.error(f"❌ Experiment {i+1} failed")
-                current_client = None
-                current_model = None
-            
-            delay = config.get('delay_between_experiments', 10)
-            if i < len(config['experiments']) - 1:
-                logger.info(f"⏳ Waiting {delay}s before next experiment...")
-                time.sleep(delay)
-        
-        logger.info(f"🎉 Batch completed! {len(results)}/{len(config['experiments'])} experiments successful")
-        return results
     
     def test_compilation_and_execution(self, tests_file):
         result = {

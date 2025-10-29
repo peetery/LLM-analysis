@@ -6,37 +6,25 @@ Automated system for evaluating LLM-generated unit tests using different prompti
 
 ```
 automation/
-├── web_automation/              # Web-based automation (Selenium)
-│   ├── base_llm_client.py      # Base Selenium client
-│   ├── openai_client.py        # ChatGPT automation
-│   ├── anthropic_client.py     # Claude.ai automation
-│   ├── deepseek_client.py      # DeepSeek automation
-│   ├── google_client.py        # Gemini automation
-│   └── huggingface_client.py   # HuggingFace automation
 ├── cli_automation/              # CLI-based automation (subprocess)
 │   ├── base_cli_client.py      # Base CLI client
-│   └── claude_code_client.py   # Claude Code CLI client
-├── docs/                        # Documentation
-│   ├── CLI_AUTOMATION.md       # CLI automation guide
-│   ├── MUTATION_TESTING.md     # Mutation testing guide
-│   ├── WSL_SETUP.md            # WSL configuration
-│   ├── WSL_CHROME_SETUP.md     # Chrome debugging setup
-│   └── archive/                # Historical documentation
-├── prompts_results/             # Web automation results
+│   ├── claude_code_client.py   # Claude Code CLI client
+│   └── gemini_cli_client.py    # Gemini CLI client
 ├── cli_results/                 # CLI automation results
-├── experiment_runner.py         # Core experiment orchestration
+├── prompts_results/             # Legacy results directory
+├── experiment_runner.py         # Analysis pipeline (shared)
 ├── prompt_strategies.py         # Prompting strategies
-├── run_experiments.py           # Web automation entry point
 ├── cli_experiment_runner.py    # CLI automation entry point
 ├── run_mutmut_backfill.py      # Mutation testing backfill (Windows→WSL)
-├── experiment_config.json       # Web automation config
+├── aggregate_runs.py           # Aggregate multiple runs
 ├── cli_config.json             # CLI automation config
+├── gemini_cli_config.json      # Gemini CLI config
 └── requirements.txt            # Python dependencies
 ```
 
 ## 🚀 Quick Start
 
-### CLI Automation (Recommended)
+### CLI Automation
 
 **List available models:**
 ```bash
@@ -57,29 +45,6 @@ python cli_experiment_runner.py \
 python cli_experiment_runner.py --config cli_config.json
 ```
 
-See [docs/CLI_AUTOMATION.md](docs/CLI_AUTOMATION.md) for details.
-
-### Web Automation (Legacy)
-
-**Interactive mode:**
-```bash
-python run_experiments.py
-```
-
-**Single experiment:**
-```bash
-python run_experiments.py \
-  --model gpt-4.5 \
-  --strategy simple_prompting \
-  --context interface \
-  --no-headless
-```
-
-**Batch experiments:**
-```bash
-python run_experiments.py --config experiment_config.json --no-headless
-```
-
 ## 🧪 Mutation Testing
 
 **On Windows:** Mutation testing is automatically skipped (requires fork support).
@@ -91,14 +56,9 @@ cd /mnt/c/Users/.../LLM-analysis/automation
 python3 run_mutmut_backfill.py --results-dir cli_results
 ```
 
-See [docs/MUTATION_TESTING.md](docs/MUTATION_TESTING.md) for details.
-
 ## 📊 Results Structure
 
-Results are organized by automation type:
-
-**Web automation:** `prompts_results/{strategy}/{context}/{model}/`
-**CLI automation:** `cli_results/{strategy}/{context}/{model}/`
+Results are organized in `cli_results/{strategy}/{context}/{model}/run_XXX/`
 
 Each result directory contains:
 - `tests.py` - Generated test code
@@ -127,23 +87,9 @@ Each result directory contains:
 pip install -r requirements.txt
 ```
 
-**Web automation requirements:**
-- Chrome with remote debugging (`--remote-debugging-port=9222`)
-- Active browser sessions with logged-in LLM accounts
-
 **CLI automation requirements:**
 - Claude Code: Already installed (you're using it!)
-- OpenAI Codex: `npm install -g @openai/codex`
-- GitHub Copilot: `npm install -g @github/copilot`
 - Google Gemini: `npm install -g @google/gemini-cli`
-
-## 📚 Documentation
-
-- [CLI Automation Guide](docs/CLI_AUTOMATION.md)
-- [Mutation Testing Guide](docs/MUTATION_TESTING.md)
-- [WSL Setup](docs/WSL_SETUP.md)
-- [Chrome Debug Setup](docs/WSL_CHROME_SETUP.md)
-- [Historical Documentation](docs/archive/)
 
 ## 🎯 Research Metrics
 
@@ -164,17 +110,12 @@ All metrics saved in JSON, CSV, and Markdown formats.
 ### File Locations
 - Run all scripts from `automation/` directory
 - `order_calculator.py` is in repository root
-- Results stay in `prompts_results/` and `cli_results/`
+- Results stay in `cli_results/`
 
 ### Mutation Testing
 - **Requires WSL/Linux** (fork support needed)
 - Use `run_mutmut_backfill.py` to add mutation results later
 - Automatically filters to passing tests only
-
-### Web Automation
-- Always use `--no-headless` for monitoring
-- Login state persists across experiments
-- Manual intervention possible during execution
 
 ## 📄 License
 
