@@ -1,6 +1,27 @@
+"""
+CLI Experiment Runner.
+
+This module orchestrates automated unit test generation experiments using
+CLI-based LLM tools. It manages experiment execution, result storage, and
+analysis pipeline integration for evaluating different prompting strategies
+and code context levels across multiple models.
+
+The runner supports:
+    - Single experiment execution
+    - Batch experiment processing from configuration files
+    - Multi-run experiment tracking (run_001, run_002, etc.)
+    - Integration with analysis pipeline (coverage, mutation testing)
+
+Usage:
+    python cli_experiment_runner.py --model MODEL --strategy STRATEGY --context CONTEXT
+    python cli_experiment_runner.py --config config.json
+    python cli_experiment_runner.py --list-models
+"""
+
 import logging
 import json
 from pathlib import Path
+from typing import Dict, List, Optional, Any
 
 from cli_automation import (
     ClaudeCodeClient,
@@ -109,9 +130,9 @@ class CLIExperimentRunner:
                     logger.error("Strategy execution failed")
                     return None
 
-                web_runner = ExperimentRunner()
+                analysis_runner = ExperimentRunner()
 
-                experiment_data = web_runner.save_experiment_results(
+                experiment_data = analysis_runner.save_experiment_results(
                     result_dir,
                     strategy_result,
                     model_name,
@@ -124,10 +145,10 @@ class CLIExperimentRunner:
                     return None
 
                 logger.info("Running analysis pipeline...")
-                analysis_results = web_runner.run_analysis(result_dir, experiment_data)
+                analysis_results = analysis_runner.run_analysis(result_dir, experiment_data)
 
-                logger.info(f"✅ Experiment completed successfully!")
-                logger.info(f"Results saved to: {result_dir}")
+                logger.info("Experiment completed successfully")
+                logger.info("Results saved to: %s", result_dir)
 
                 return {
                     'experiment': experiment_data,
@@ -166,19 +187,18 @@ class CLIExperimentRunner:
 
             if result:
                 results.append(result)
-                logger.info(f"✅ Experiment {i+1} completed successfully")
+                logger.info("Experiment %d/%d completed successfully", i+1, len(experiments))
             else:
-                logger.error(f"❌ Experiment {i+1} failed")
+                logger.error("Experiment %d/%d failed", i+1, len(experiments))
 
             if i < len(experiments) - 1:
                 import time
-                logger.info(f"⏳ Waiting {delay}s before next experiment...")
+                logger.info("Waiting %ds before next experiment...", delay)
                 time.sleep(delay)
 
-        logger.info(f"\n{'='*60}")
-        logger.info(f"Batch completed!")
-        logger.info(f"Successful: {len(results)}/{len(experiments)}")
-        logger.info(f"{'='*60}\n")
+        logger.info("="*60)
+        logger.info("Batch completed: %d/%d experiments successful", len(results), len(experiments))
+        logger.info("="*60)
 
         return results
 
@@ -289,10 +309,14 @@ Examples:
         )
 
         if result:
-            print("\n✅ Experiment completed successfully!")
+            print("\n" + "="*60)
+            print("Experiment completed successfully")
             print(f"Results saved to: {result['result_dir']}")
+            print("="*60 + "\n")
         else:
-            print("\n❌ Experiment failed!")
+            print("\n" + "="*60)
+            print("Experiment failed")
+            print("="*60 + "\n")
 
     else:
         parser.print_help()

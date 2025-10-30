@@ -1,15 +1,25 @@
 """
-Gemini CLI Client
+Gemini CLI Client.
 
-This client uses Gemini CLI's `-p` (prompt) flag for non-interactive automation.
+This module implements a client for interacting with Google's Gemini models
+via the Gemini CLI tool. It uses the `-p` (prompt) flag for non-interactive
+automation and JSON output format for reliable parsing.
 
 Authentication:
-    Option 1 (Recommended): Login via Google Account (automatic)
+    Option 1 (Recommended): Login via Google Account
+        Run: gemini login
     Option 2: Use API key via GEMINI_API_KEY environment variable
+        export GEMINI_API_KEY=your_api_key
 
-Models available:
-    - gemini-2.5-pro: Gemini 2.5 Pro (most capable, GA)
-    - gemini-2.5-flash: Gemini 2.5 Flash (fast, GA)
+Available Models:
+    - gemini-2.5-pro: Gemini 2.5 Pro (most capable, general availability)
+    - gemini-2.5-flash: Gemini 2.5 Flash (fast, general availability)
+    - gemini-2.0-flash: Gemini 2.0 Flash (legacy)
+
+Technical Details:
+    - Uses JSON output format for structured responses
+    - Prompts are written to temporary files for Windows compatibility
+    - Tool usage is disabled via --allowed-tools "" to force text responses
 """
 
 import subprocess
@@ -20,6 +30,7 @@ import time
 import json
 import os
 from pathlib import Path
+from typing import Optional, List
 
 from .base_cli_client import BaseCLIClient
 
@@ -27,6 +38,16 @@ logger = logging.getLogger(__name__)
 
 
 class GeminiCLIClient(BaseCLIClient):
+    """
+    Client for Gemini CLI tool.
+
+    This client provides integration with Google's Gemini CLI,
+    enabling automated test generation experiments with Gemini models.
+
+    Attributes:
+        SUPPORTED_MODELS: List of valid model identifiers
+        MODEL_ALIASES: Human-readable aliases for model identifiers
+    """
 
     SUPPORTED_MODELS = [
         "gemini-2.5-pro",
@@ -43,6 +64,17 @@ class GeminiCLIClient(BaseCLIClient):
     }
 
     def __init__(self, model: str = "gemini-2.5-flash", timeout: int = 300):
+        """
+        Initialize Gemini CLI client.
+
+        Args:
+            model: Model name or alias (default: 'gemini-2.5-flash')
+            timeout: Command timeout in seconds (default: 300)
+
+        Raises:
+            ValueError: If the specified model is not supported
+            RuntimeError: If Gemini CLI is not installed or not accessible
+        """
         actual_model = self.MODEL_ALIASES.get(model, model)
 
         if actual_model not in self.SUPPORTED_MODELS:
@@ -52,7 +84,6 @@ class GeminiCLIClient(BaseCLIClient):
             )
 
         model = actual_model
-
         command = "gemini.cmd" if platform.system() == "Windows" else "gemini"
 
         super().__init__(command=command, model=model, timeout=timeout)
@@ -69,9 +100,15 @@ class GeminiCLIClient(BaseCLIClient):
                 "Make sure you're logged in (run: gemini login) or set GEMINI_API_KEY"
             )
 
-        logger.info(f"Gemini CLI client initialized with model: {model}")
+        logger.info("Gemini CLI client initialized with model: %s", model)
 
     def check_installation(self) -> bool:
+        """
+        Verify Gemini CLI installation.
+
+        Returns:
+            True if Gemini CLI is installed and working, False otherwise
+        """
         try:
             result = subprocess.run(
                 [self.command, "--version"],
@@ -83,10 +120,13 @@ class GeminiCLIClient(BaseCLIClient):
 
             if result.returncode == 0:
                 version = result.stdout.strip()
-                logger.info(f"Gemini CLI is installed: {version}")
+                logger.info("Gemini CLI is installed: %s", version)
                 return True
             else:
-                logger.error(f"Gemini CLI returned error code {result.returncode}")
+                logger.error(
+                    "Gemini CLI returned error code %d",
+                    result.returncode
+                )
                 return False
 
         except FileNotFoundError:
@@ -97,33 +137,54 @@ class GeminiCLIClient(BaseCLIClient):
             logger.error("Gemini CLI version check timed out")
             return False
         except Exception as e:
-            logger.error(f"Error checking installation: {e}")
+            logger.error("Error checking installation: %s", e)
             return False
 
     def check_authentication(self) -> bool:
+        """
+        Check Gemini authentication status.
+
+        This method checks for GEMINI_API_KEY environment variable.
+        If not found, it assumes the user is logged in via 'gemini login'.
+
+        Returns:
+            True if authentication is configured
+        """
         api_key = os.getenv("GEMINI_API_KEY")
         if api_key:
-            logger.info("✓ GEMINI_API_KEY found")
+            logger.info("GEMINI_API_KEY environment variable found")
             return True
 
-        logger.info("✓ Skipping auth check (assuming logged in via 'gemini login')")
-        logger.info("   If not logged in, run: gemini login")
+        logger.debug(
+            "No GEMINI_API_KEY found, assuming logged in via 'gemini login'"
+        )
+        logger.debug("If not logged in, run: gemini login")
         return True
 
     def send_prompt(self, prompt: str, **kwargs) -> str:
         """
-        Send prompt to Gemini CLI using -p flag
+        Send prompt to Gemini CLI and retrieve the response.
 
-        Uses `-p --output-format json --allowed-tools ""` for reliable non-interactive output.
-        The --allowed-tools "" flag is CRITICAL - it prevents Gemini from using Write/Edit/Bash
-        tools and forces it to return code in the response field.
+        This method uses the `-p --output-format json --allowed-tools ""`
+        flags for reliable non-interactive execution. The --allowed-tools ""
+        flag is critical - it prevents Gemini from using Write/Edit/Bash tools
+        and forces it to return code in the response field.
+
+        For Chain-of-Thought prompting, the is_final_step parameter can be
+        passed to add instructions for returning code.
 
         Args:
-            prompt: The prompt text
+            prompt: The prompt text to send
             **kwargs: Additional arguments
-                - is_final_step: bool - if True, adds instruction to return code (for CoT)
+                - is_final_step (bool): If True, adds instruction to return code
+
+        Returns:
+            The model's response text
+
+        Raises:
+            RuntimeError: If the command fails or no valid response is received
         """
-        logger.info(f"Sending prompt to Gemini CLI ({len(prompt)} chars)")
+        logger.info("Sending prompt to Gemini CLI (%d chars)", len(prompt))
 
         is_final_step = kwargs.get('is_final_step', True)
 
@@ -133,11 +194,12 @@ class GeminiCLIClient(BaseCLIClient):
 IMPORTANT: Return the complete code in your response. Do NOT use write_file, edit_file, or any other tools. Just provide the code directly in your answer."""
         else:
             enhanced_prompt = prompt
-            logger.debug("Skipping 'return code' instruction (not final step)")
+            logger.debug(
+                "Skipping 'return code' instruction (not final step)"
+            )
 
         start_time = time.time()
 
-        # Write prompt to temp file (more reliable than stdin on Windows)
         with tempfile.NamedTemporaryFile(
             mode='w',
             suffix='.txt',
@@ -148,7 +210,11 @@ IMPORTANT: Return the complete code in your response. Do NOT use write_file, edi
             prompt_file = f.name
 
         try:
-            cmd_parts = [self.command, '-p', '--output-format', 'json', '--allowed-tools', '""']
+            cmd_parts = [
+                self.command, '-p',
+                '--output-format', 'json',
+                '--allowed-tools', '""'
+            ]
 
             if self.model:
                 cmd_parts.extend(['-m', self.model])
@@ -165,15 +231,18 @@ IMPORTANT: Return the complete code in your response. Do NOT use write_file, edi
 
             elapsed_time = time.time() - start_time
             self.last_response_time = elapsed_time
-            logger.info(f"Gemini CLI response received in {elapsed_time:.2f}s")
+            logger.info("Gemini CLI response received in %.2fs", elapsed_time)
 
             if result.returncode != 0:
-                logger.error(f"Command failed with return code {result.returncode}")
-                logger.error(f"stderr: {result.stderr}")
-                logger.error(f"stdout: {result.stdout[:500]}")
+                logger.error(
+                    "Command failed with return code %d",
+                    result.returncode
+                )
+                logger.error("stderr: %s", result.stderr)
+                logger.debug("stdout: %s", result.stdout[:500])
                 raise RuntimeError(
-                    f"Gemini command failed. stderr: {result.stderr}, "
-                    f"stdout: {result.stdout[:200]}"
+                    f"Gemini command failed. "
+                    f"stderr: {result.stderr}, stdout: {result.stdout[:200]}"
                 )
 
             try:
@@ -192,27 +261,28 @@ IMPORTANT: Return the complete code in your response. Do NOT use write_file, edi
                         result_text = response_data.get("output", "")
 
                 if result_text:
-                    logger.info(f"Received Gemini response ({len(result_text)} chars)")
-
-                    if '```python' in result_text:
-                        logger.info("✓ Response contains ```python code blocks")
-                    elif '```' in result_text:
-                        logger.info("✓ Response contains generic ``` code blocks")
-                    elif 'import unittest' in result_text or 'def test' in result_text:
-                        logger.info("✓ Response appears to be raw Python code")
-                    else:
-                        logger.warning("⚠️ Response doesn't appear to contain code")
-
+                    logger.info(
+                        "Received Gemini response (%d chars)",
+                        len(result_text)
+                    )
+                    self._log_code_detection(result_text)
                     return result_text
 
-                logger.error(f"Could not extract result from JSON response")
-                logger.error(f"Response keys: {list(response_data.keys()) if isinstance(response_data, dict) else 'not a dict'}")
-                logger.error(f"Response structure: {json.dumps(response_data, indent=2)[:1000]}")
+                logger.error("Could not extract result from JSON response")
+                logger.debug(
+                    "Response keys: %s",
+                    list(response_data.keys()) if isinstance(response_data, dict)
+                    else 'not a dict'
+                )
+                logger.debug(
+                    "Response structure: %s",
+                    json.dumps(response_data, indent=2)[:1000]
+                )
                 raise RuntimeError("No code generated in Gemini response")
 
             except json.JSONDecodeError as e:
-                logger.error(f"Failed to parse JSON response: {e}")
-                logger.error(f"Raw output: {result.stdout[:500]}")
+                logger.error("Failed to parse JSON response: %s", e)
+                logger.debug("Raw output: %s", result.stdout[:500])
 
                 if 'import unittest' in result.stdout or 'def test' in result.stdout:
                     logger.info("Fallback: treating raw output as code")
@@ -223,7 +293,32 @@ IMPORTANT: Return the complete code in your response. Do NOT use write_file, edi
         finally:
             Path(prompt_file).unlink(missing_ok=True)
 
+    def _log_code_detection(self, text: str):
+        """
+        Log information about detected code in the response.
+
+        Args:
+            text: Response text to analyze
+        """
+        if '```python' in text:
+            logger.debug("Response contains Python code blocks")
+        elif '```' in text:
+            logger.debug("Response contains generic code blocks")
+        elif 'import unittest' in text or 'def test' in text:
+            logger.debug("Response appears to be raw Python code")
+        else:
+            logger.warning("Response doesn't appear to contain code")
+
     def set_model(self, model: str):
+        """
+        Switch to a different model.
+
+        Args:
+            model: Model identifier
+
+        Raises:
+            ValueError: If the model is not supported
+        """
         if model not in self.SUPPORTED_MODELS:
             raise ValueError(
                 f"Unsupported model: {model}. "
@@ -231,16 +326,42 @@ IMPORTANT: Return the complete code in your response. Do NOT use write_file, edi
             )
 
         self.model = model
-        logger.info(f"Switched to model: {model}")
+        logger.info("Switched to model: %s", model)
 
-    def get_available_models(self) -> list:
+    def get_available_models(self) -> List[str]:
+        """
+        Get list of available models.
+
+        Returns:
+            List of supported model identifiers
+        """
         return self.SUPPORTED_MODELS.copy()
 
-    def send_prompt_with_context(self, prompt: str, context_files: list = None) -> str:
+    def send_prompt_with_context(
+        self,
+        prompt: str,
+        context_files: Optional[List[str]] = None
+    ) -> str:
+        """
+        Send prompt with additional context files.
+
+        Note: Context file support is not yet implemented for Gemini CLI.
+        This method falls back to regular prompt sending.
+
+        Args:
+            prompt: The prompt text
+            context_files: List of file paths to include as context (not used)
+
+        Returns:
+            The model's response text
+        """
         if not context_files:
             return self.send_prompt(prompt)
 
-        logger.info(f"Sending prompt with {len(context_files)} context files")
-
+        logger.info(
+            "Sending prompt with %d context files",
+            len(context_files)
+        )
         logger.warning("Context files not yet implemented for Gemini CLI")
+
         return self.send_prompt(prompt)

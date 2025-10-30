@@ -1,15 +1,21 @@
 """
-Claude Code CLI Client
+Claude Code CLI Client.
 
-This client uses Claude Code's `-p` (print) flag for non-interactive automation.
-
-The `-p` flag provides true non-interactive mode that doesn't cause recursion.
+This module implements a client for interacting with Claude Code via its
+command-line interface. It uses the `-p` (print) flag for non-interactive
+automation and JSON output format for reliable parsing.
 
 Authentication:
-    Automatic via Claude Pro/Team/Enterprise subscription
+    Automatic via Claude Pro/Team/Enterprise subscription.
+    The parent Claude Code process handles all authentication.
 
-Models available:
-    - claude-sonnet-4.5: Latest Sonnet (recommended)
+Available Models:
+    - claude-sonnet-4-5-20250929: Latest Claude Sonnet 4.5 (recommended)
+
+Technical Details:
+    - Uses JSON output format for structured responses
+    - Prompts are written to temporary files for Windows compatibility
+    - Supports Chain-of-Thought prompting via sequential execution
 """
 
 import subprocess
@@ -19,6 +25,7 @@ import platform
 import time
 import json
 from pathlib import Path
+from typing import Optional, List
 
 from .base_cli_client import BaseCLIClient
 
@@ -26,6 +33,16 @@ logger = logging.getLogger(__name__)
 
 
 class ClaudeCodeClient(BaseCLIClient):
+    """
+    Client for Claude Code CLI tool.
+
+    This client provides integration with Claude Code's command-line interface,
+    enabling automated test generation experiments without manual interaction.
+
+    Attributes:
+        SUPPORTED_MODELS: List of valid model identifiers
+        MODEL_ALIASES: Human-readable aliases for model identifiers
+    """
 
     SUPPORTED_MODELS = [
         "claude-sonnet-4-5-20250929",
@@ -36,6 +53,17 @@ class ClaudeCodeClient(BaseCLIClient):
     }
 
     def __init__(self, model: str = "claude-sonnet-4.5", timeout: int = 300):
+        """
+        Initialize Claude Code client.
+
+        Args:
+            model: Model name or alias (default: 'claude-sonnet-4.5')
+            timeout: Command timeout in seconds (default: 300)
+
+        Raises:
+            ValueError: If the specified model is not supported
+            RuntimeError: If Claude CLI is not installed or not accessible
+        """
         actual_model = self.MODEL_ALIASES.get(model, model)
 
         if actual_model not in self.SUPPORTED_MODELS:
@@ -45,7 +73,6 @@ class ClaudeCodeClient(BaseCLIClient):
             )
 
         model = actual_model
-
         command = "claude.cmd" if platform.system() == "Windows" else "claude"
 
         super().__init__(command=command, model=model, timeout=timeout)
@@ -57,11 +84,19 @@ class ClaudeCodeClient(BaseCLIClient):
             )
 
         if not self.check_authentication():
-            logger.warning("Could not verify Claude authentication, proceeding anyway")
+            logger.warning(
+                "Could not verify Claude authentication, proceeding anyway"
+            )
 
-        logger.info(f"Claude Code client initialized with model: {model}")
+        logger.info("Claude Code client initialized with model: %s", model)
 
     def check_installation(self) -> bool:
+        """
+        Verify Claude CLI installation.
+
+        Returns:
+            True if Claude CLI is installed and working, False otherwise
+        """
         try:
             result = subprocess.run(
                 [self.command, "-p", "test"],
@@ -75,8 +110,11 @@ class ClaudeCodeClient(BaseCLIClient):
                 logger.info("Claude CLI is installed and working")
                 return True
             else:
-                logger.error(f"Claude CLI returned error code {result.returncode}")
-                logger.error(f"stderr: {result.stderr[:200]}")
+                logger.error(
+                    "Claude CLI returned error code %d",
+                    result.returncode
+                )
+                logger.debug("stderr: %s", result.stderr[:200])
                 return False
 
         except FileNotFoundError:
@@ -86,40 +124,40 @@ class ClaudeCodeClient(BaseCLIClient):
             logger.error("Claude CLI test timed out after 30s")
             return False
         except Exception as e:
-            logger.error(f"Error checking installation: {e}")
+            logger.error("Error checking installation: %s", e)
             return False
 
     def check_authentication(self) -> bool:
         """
-        Check if authenticated to Claude
+        Check Claude authentication status.
 
-        Claude Code handles authentication automatically.
-        This method always returns True as auth is managed by the parent process.
+        Claude Code handles authentication automatically through the parent
+        process, so this method always returns True.
+
+        Returns:
+            True (authentication is managed by parent process)
         """
         return True
 
     def send_prompt(self, prompt: str, **kwargs) -> str:
         """
-        Send prompt to Claude Code using -p flag
+        Send prompt to Claude Code and retrieve the response.
 
-        Uses `-p --output-format json --max-turns 1` for reliable non-interactive output.
-        The --max-turns 1 flag prevents Claude from trying to use tools (Write, Edit, etc.)
-        and ensures it returns only text response.
-
-        Note: On Windows, stdin doesn't work reliably with shell=True, so we write
-        the prompt to a temporary file.
+        This method uses the `-p --output-format json` flags for reliable
+        non-interactive execution. Prompts are written to a temporary file
+        to ensure proper handling on Windows where stdin can be unreliable.
 
         Args:
-            prompt: The prompt text
-            **kwargs: Additional arguments (not used currently)
+            prompt: The prompt text to send
+            **kwargs: Additional arguments (currently unused)
 
         Returns:
-            Model response text
+            The model's response text
 
         Raises:
-            RuntimeError: If command fails after retries
+            RuntimeError: If the command fails or no valid response is received
         """
-        logger.info(f"Sending prompt to Claude Code ({len(prompt)} chars)")
+        logger.info("Sending prompt to Claude Code (%d chars)", len(prompt))
 
         start_time = time.time()
 
@@ -150,13 +188,19 @@ class ClaudeCodeClient(BaseCLIClient):
 
             elapsed_time = time.time() - start_time
             self.last_response_time = elapsed_time
-            logger.info(f"Claude Code response received in {elapsed_time:.2f}s")
+            logger.info("Claude Code response received in %.2fs", elapsed_time)
 
             if result.returncode != 0:
-                logger.error(f"Command failed with return code {result.returncode}")
-                logger.error(f"stderr: {result.stderr}")
-                logger.error(f"stdout: {result.stdout[:500]}")
-                raise RuntimeError(f"Claude command failed. stderr: {result.stderr}, stdout: {result.stdout[:200]}")
+                logger.error(
+                    "Command failed with return code %d",
+                    result.returncode
+                )
+                logger.error("stderr: %s", result.stderr)
+                logger.debug("stdout: %s", result.stdout[:500])
+                raise RuntimeError(
+                    f"Claude command failed. "
+                    f"stderr: {result.stderr}, stdout: {result.stdout[:200]}"
+                )
 
             try:
                 response_data = json.loads(result.stdout)
@@ -165,47 +209,78 @@ class ClaudeCodeClient(BaseCLIClient):
                     result_text = response_data.get("result", "")
 
                     if result_text:
-                        logger.info(f"Received Claude response ({len(result_text)} chars)")
-
-                        if '```python' in result_text:
-                            logger.info("✓ Response contains ```python code blocks")
-                        elif '```' in result_text:
-                            logger.info("✓ Response contains generic ``` code blocks")
-                        elif 'import unittest' in result_text or 'def test' in result_text:
-                            logger.info("✓ Response appears to be raw Python code")
-                        else:
-                            logger.warning("⚠️ Response doesn't appear to contain code")
-
+                        logger.info(
+                            "Received Claude response (%d chars)",
+                            len(result_text)
+                        )
+                        self._log_code_detection(result_text)
                         return result_text
 
-                    permission_denials = response_data.get("permission_denials", [])
+                    permission_denials = response_data.get(
+                        "permission_denials", []
+                    )
                     if permission_denials:
                         for denial in permission_denials:
                             if denial.get("tool_name") == "Write":
                                 tool_input = denial.get("tool_input", {})
                                 content = tool_input.get("content", "")
                                 if content:
-                                    logger.info("Extracted code from Write permission denial")
+                                    logger.info(
+                                        "Extracted code from Write permission denial"
+                                    )
                                     return content
 
-                    logger.error(f"No result or code found in response")
-                    logger.error(f"Response keys: {response_data.keys()}")
-                    logger.error(f"Response type: {response_data.get('type')}")
+                    logger.error("No result or code found in response")
+                    logger.debug("Response keys: %s", response_data.keys())
+                    logger.debug("Response type: %s", response_data.get('type'))
                     raise RuntimeError("No code generated in Claude response")
                 else:
-                    logger.error(f"Unexpected response type: {response_data.get('type')}")
-                    logger.error(f"Full response: {json.dumps(response_data, indent=2)[:1000]}")
-                    raise RuntimeError("Failed to extract result from Claude response")
+                    logger.error(
+                        "Unexpected response type: %s",
+                        response_data.get('type')
+                    )
+                    logger.debug(
+                        "Full response: %s",
+                        json.dumps(response_data, indent=2)[:1000]
+                    )
+                    raise RuntimeError(
+                        "Failed to extract result from Claude response"
+                    )
 
             except json.JSONDecodeError as e:
-                logger.error(f"Failed to parse JSON response: {e}")
-                logger.error(f"Raw output: {result.stdout[:500]}")
+                logger.error("Failed to parse JSON response: %s", e)
+                logger.debug("Raw output: %s", result.stdout[:500])
                 raise RuntimeError(f"Invalid JSON response from Claude: {e}")
 
         finally:
             Path(prompt_file).unlink(missing_ok=True)
 
+    def _log_code_detection(self, text: str):
+        """
+        Log information about detected code in the response.
+
+        Args:
+            text: Response text to analyze
+        """
+        if '```python' in text:
+            logger.debug("Response contains Python code blocks")
+        elif '```' in text:
+            logger.debug("Response contains generic code blocks")
+        elif 'import unittest' in text or 'def test' in text:
+            logger.debug("Response appears to be raw Python code")
+        else:
+            logger.warning("Response doesn't appear to contain code")
+
     def set_model(self, model: str):
+        """
+        Switch to a different model.
+
+        Args:
+            model: Model identifier
+
+        Raises:
+            ValueError: If the model is not supported
+        """
         if model not in self.SUPPORTED_MODELS:
             raise ValueError(
                 f"Unsupported model: {model}. "
@@ -213,16 +288,42 @@ class ClaudeCodeClient(BaseCLIClient):
             )
 
         self.model = model
-        logger.info(f"Switched to model: {model}")
+        logger.info("Switched to model: %s", model)
 
-    def get_available_models(self) -> list:
+    def get_available_models(self) -> List[str]:
+        """
+        Get list of available models.
+
+        Returns:
+            List of supported model identifiers
+        """
         return self.SUPPORTED_MODELS.copy()
 
-    def send_prompt_with_context(self, prompt: str, context_files: list = None) -> str:
+    def send_prompt_with_context(
+        self,
+        prompt: str,
+        context_files: Optional[List[str]] = None
+    ) -> str:
+        """
+        Send prompt with additional context files.
+
+        This method allows providing source files as context to the model,
+        which can improve test generation quality.
+
+        Args:
+            prompt: The prompt text
+            context_files: List of file paths to include as context
+
+        Returns:
+            The model's response text
+        """
         if not context_files:
             return self.send_prompt(prompt)
 
-        logger.info(f"Sending prompt with {len(context_files)} context files")
+        logger.info(
+            "Sending prompt with %d context files",
+            len(context_files)
+        )
 
         args = ["claude"]
 
@@ -233,7 +334,7 @@ class ClaudeCodeClient(BaseCLIClient):
             if Path(file_path).exists():
                 args.extend(["--context", file_path])
             else:
-                logger.warning(f"Context file not found: {file_path}")
+                logger.warning("Context file not found: %s", file_path)
 
         with tempfile.NamedTemporaryFile(
             mode='w',
@@ -249,4 +350,4 @@ class ClaudeCodeClient(BaseCLIClient):
             result = self.execute_command(args)
             return result.stdout
         finally:
-            Path(prompt_file).unlink()
+            Path(prompt_file).unlink(missing_ok=True)

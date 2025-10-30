@@ -1,24 +1,73 @@
+"""
+Mutation Testing Backfill Script.
+
+This script enables running mutation testing on Windows-generated test results
+by executing it in WSL/Linux where fork support is available. It identifies
+result directories without mutation results and runs mutmut analysis.
+
+The script:
+    - Verifies execution on Linux/WSL (required for fork support)
+    - Locates the mutants directory in the repository
+    - Filters tests to include only passing tests
+    - Runs mutation testing via mutmut
+    - Parses results and updates analysis files
+    - Generates updated summary reports
+
+Usage:
+    # From WSL (not Windows):
+    cd /mnt/c/Users/.../LLM-analysis/automation
+    python3 run_mutmut_backfill.py --results-dir cli_results
+"""
+
 import sys
 import json
 import subprocess
 import logging
 from pathlib import Path
 from datetime import datetime
+from typing import Optional, Dict, Any
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
 
 def check_platform():
+    """
+    Verify that the script is running on Linux/WSL.
+
+    Mutation testing requires fork() support which is not available on Windows.
+    This function ensures the script is executed in an appropriate environment.
+
+    Raises:
+        SystemExit: If running on Windows
+    """
     import platform
     if platform.system() == 'Windows':
-        logger.error("❌ This script must be run in WSL/Linux (mutation testing requires fork support)")
-        logger.error("💡 Open WSL and run: cd /mnt/c/Users/.../automation && python3 run_mutmut_backfill.py")
+        logger.error(
+            "This script must be run in WSL/Linux "
+            "(mutation testing requires fork support)"
+        )
+        logger.error(
+            "Open WSL and run: "
+            "cd /mnt/c/Users/.../automation && python3 run_mutmut_backfill.py"
+        )
         sys.exit(1)
-    logger.info("✅ Running on Linux/WSL")
+    logger.info("Running on Linux/WSL")
 
 
-def find_mutants_directory():
+def find_mutants_directory() -> Optional[Path]:
+    """
+    Locate the mutants directory in parent directories.
+
+    Searches up to 3 levels above the current directory for the mutants
+    directory containing mutation testing configuration.
+
+    Returns:
+        Path to mutants directory if found, None otherwise
+    """
     current_dir = Path(".")
 
     for i in range(3):
@@ -26,16 +75,29 @@ def find_mutants_directory():
         if check_dir.exists():
             return check_dir.resolve()
 
-    logger.error("❌ Mutants directory not found")
+    logger.error("Mutants directory not found")
     return None
 
 
 def filter_passing_tests(test_file: Path) -> str:
+    """
+    Filter test file to include only passing tests.
+
+    Runs the test suite to identify which tests pass and which fail,
+    then generates a filtered version containing only passing tests.
+    This is necessary for mutation testing, which requires all tests to pass.
+
+    Args:
+        test_file: Path to the test file to filter
+
+    Returns:
+        Filtered test code as a string
+    """
     import ast
     import re
 
     try:
-        logger.info("🔍 Filtering tests - identifying passing tests...")
+        logger.info("Filtering tests - identifying passing tests...")
 
         result = subprocess.run(
             ['python3', '-m', 'unittest', test_file.stem, '-v'],
@@ -58,14 +120,17 @@ def filter_passing_tests(test_file: Path) -> str:
                 if match:
                     failing_tests.add(match.group(1))
 
-        logger.info(f"📊 Test filtering: {len(passing_tests)} passing, {len(failing_tests)} failing")
+        logger.info(
+            "Test filtering: %d passing, %d failing",
+            len(passing_tests), len(failing_tests)
+        )
 
         if not passing_tests:
-            logger.warning("⚠️  No passing tests found - using original file")
+            logger.warning("No passing tests found - using original file")
             return test_file.read_text()
 
         if not failing_tests:
-            logger.info("✅ All tests pass - no filtering needed")
+            logger.info("All tests pass - no filtering needed")
             return test_file.read_text()
 
         test_content = test_file.read_text()
@@ -99,14 +164,14 @@ def filter_passing_tests(test_file: Path) -> str:
 
         try:
             filtered_content = ast.unparse(filtered_tree)
-            logger.info(f"✅ Filtered out {len(failing_tests)} failing tests")
+            logger.info(f"Filtered out {len(failing_tests)} failing tests")
             return filtered_content
         except AttributeError:
-            logger.warning("⚠️  ast.unparse not available - using line-based filtering")
+            logger.warning("ast.unparse not available - using line-based filtering")
             return filter_tests_line_based(test_content, failing_tests)
 
     except Exception as e:
-        logger.error(f"⚠️  Test filtering failed: {e} - using original file")
+        logger.error(f"Test filtering failed: {e} - using original file")
         return test_file.read_text()
 
 
@@ -151,12 +216,12 @@ def run_mutmut_for_experiment(experiment_dir: Path, mutants_dir: Path):
 
     test_file = experiment_dir / "mutmut_test.py"
     if not test_file.exists():
-        logger.warning(f"⚠️  No mutmut_test.py found - skipping")
+        logger.warning(f"No mutmut_test.py found - skipping")
         return False
 
     mutmut_results_file = experiment_dir / "mutmut_results.txt"
     if mutmut_results_file.exists() and mutmut_results_file.stat().st_size > 0:
-        logger.info(f"ℹ️  Mutation results already exist - skipping")
+        logger.info(f"Mutation results already exist - skipping")
         return False
 
     try:
@@ -183,7 +248,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
         test_dst = mutants_dir / "tests" / "mutmut_test.py"
         test_dst.parent.mkdir(exist_ok=True)
         test_dst.write_text(test_content)
-        logger.info(f"✓ Wrote filtered test to {test_dst} (fixed imports for src-layout)")
+        logger.info(f"Wrote filtered test to {test_dst} (fixed imports for src-layout)")
 
         logger.info("Cleaning mutmut cache...")
         for cache_file in mutants_dir.glob(".mutmut-cache*"):
@@ -205,7 +270,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
         logger.debug(f"   Mutmut stderr: {run_result.stderr[:500]}")
 
         if run_result.returncode != 0:
-            logger.warning(f"⚠️  Mutmut run returned code {run_result.returncode}")
+            logger.warning(f"Mutmut run returned code {run_result.returncode}")
 
         results_result = subprocess.run(
             ['mutmut', 'results'],
@@ -215,39 +280,39 @@ sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
         )
 
         mutmut_results_file.write_text(results_result.stdout)
-        logger.info(f"✓ Saved mutation results to {mutmut_results_file}")
+        logger.info(f"Saved mutation results to {mutmut_results_file}")
 
         combined_output = run_result.stdout + "\n" + run_result.stderr
         stats = parse_mutmut_results(combined_output)
 
         if stats['killed'] == 0 and stats['survived'] == 0 and stats['total_mutants'] > 0:
-            logger.warning("⚠️  Failed to parse stats from mutmut run output, trying mutmut results...")
+            logger.warning("Failed to parse stats from mutmut run output, trying mutmut results...")
             stats_alt = parse_mutmut_results_from_text(results_result.stdout)
             if stats_alt['killed'] > 0 or stats_alt['survived'] > 0:
-                logger.info("✅ Successfully parsed from mutmut results output")
+                logger.info("Successfully parsed from mutmut results output")
                 stats = stats_alt
             else:
-                logger.warning("⚠️  Could not parse mutation stats - results may be incomplete")
+                logger.warning("Could not parse mutation stats - results may be incomplete")
         stats_file = experiment_dir / "mutmut-stats.json"
         with open(stats_file, 'w') as f:
             json.dump(stats, f, indent=2)
-        logger.info(f"✓ Saved stats: {stats}")
+        logger.info(f"Saved stats: {stats}")
 
         update_analysis_results(experiment_dir, stats)
 
         regenerate_markdown_summary(experiment_dir)
 
-        logger.info(f"✅ Mutation testing completed successfully!")
+        logger.info(f"Mutation testing completed successfully!")
         logger.info(f"   Mutation score: {stats['mutation_score']}%")
         logger.info(f"   Killed: {stats['killed']}/{stats['total_mutants']}")
 
         return True
 
     except subprocess.TimeoutExpired:
-        logger.error(f"❌ Mutation testing timed out after 10 minutes")
+        logger.error(f"Mutation testing timed out after 10 minutes")
         return False
     except Exception as e:
-        logger.error(f"❌ Error running mutation testing: {e}")
+        logger.error(f"Error running mutation testing: {e}")
         return False
 
 
@@ -372,7 +437,7 @@ def update_analysis_results(experiment_dir: Path, mutmut_stats: dict):
     analysis_file = experiment_dir / "analysis_results.json"
 
     if not analysis_file.exists():
-        logger.warning(f"⚠️  analysis_results.json not found - skipping update")
+        logger.warning(f"analysis_results.json not found - skipping update")
         return
 
     with open(analysis_file, 'r') as f:
@@ -389,7 +454,7 @@ def update_analysis_results(experiment_dir: Path, mutmut_stats: dict):
     with open(analysis_file, 'w') as f:
         json.dump(analysis, f, indent=2, ensure_ascii=False)
 
-    logger.info(f"✓ Updated {analysis_file}")
+    logger.info(f"Updated {analysis_file}")
 
 
 def regenerate_markdown_summary(experiment_dir: Path):
@@ -397,7 +462,7 @@ def regenerate_markdown_summary(experiment_dir: Path):
     experiment_file = experiment_dir / "experiment_results.json"
 
     if not analysis_file.exists() or not experiment_file.exists():
-        logger.warning("⚠️  Missing JSON files - skipping markdown regeneration")
+        logger.warning("Missing JSON files - skipping markdown regeneration")
         return
 
     with open(analysis_file, 'r') as f:
@@ -488,7 +553,7 @@ def regenerate_markdown_summary(experiment_dir: Path):
 """
 
     md_file.write_text(content, encoding='utf-8')
-    logger.info(f"✓ Regenerated {md_file}")
+    logger.info(f"Regenerated {md_file}")
 
 
 def process_results_directory(results_dir: Path, run_id_filter: str = None):
@@ -496,7 +561,7 @@ def process_results_directory(results_dir: Path, run_id_filter: str = None):
 
     mutants_dir = find_mutants_directory()
     if not mutants_dir:
-        logger.error("❌ Cannot proceed without mutants directory")
+        logger.error("Cannot proceed without mutants directory")
         sys.exit(1)
 
     logger.info(f"Using mutants directory: {mutants_dir}")
@@ -516,9 +581,9 @@ def process_results_directory(results_dir: Path, run_id_filter: str = None):
 
     if not experiment_dirs:
         if run_id_filter:
-            logger.warning(f"⚠️  No experiments found in {results_dir} for run_{run_id_filter}")
+            logger.warning(f"No experiments found in {results_dir} for run_{run_id_filter}")
         else:
-            logger.warning(f"⚠️  No experiments found in {results_dir}")
+            logger.warning(f"No experiments found in {results_dir}")
         return
 
     logger.info(f"Found {len(experiment_dirs)} experiments to process")
@@ -579,19 +644,19 @@ Examples:
         check_platform()
         mutants_dir = find_mutants_directory()
         if not mutants_dir:
-            logger.error("❌ Cannot proceed without mutants directory")
+            logger.error("Cannot proceed without mutants directory")
             sys.exit(1)
 
         exp_dir = Path(args.experiment_dir).resolve()
         if not exp_dir.exists():
-            logger.error(f"❌ Experiment directory not found: {exp_dir}")
+            logger.error(f"Experiment directory not found: {exp_dir}")
             sys.exit(1)
 
         run_mutmut_for_experiment(exp_dir, mutants_dir)
     else:
         results_dir = Path(args.results_dir)
         if not results_dir.exists():
-            logger.error(f"❌ Results directory not found: {results_dir}")
+            logger.error(f"Results directory not found: {results_dir}")
             sys.exit(1)
 
         process_results_directory(results_dir, run_id_filter=args.run_id)

@@ -1,10 +1,39 @@
+"""
+Prompting Strategies for LLM Test Generation.
+
+This module defines different prompting strategies for automated unit test
+generation. It provides a framework for loading and executing prompt templates
+with different levels of code context and prompting approaches.
+
+Available Strategies:
+    - SimplePrompting: Single-step prompt requesting complete test suite
+    - ChainOfThoughtPrompting: Multi-step process (analyze → plan → implement)
+
+Supported Context Levels:
+    - interface: Method signatures only
+    - interface_docstring: Signatures with docstrings
+    - full_context: Complete source code implementation
+"""
+
 import time
 import logging
 from pathlib import Path
+from typing import Dict, Optional, Tuple, List
 
 logger = logging.getLogger(__name__)
 
+
 class PromptStrategy:
+    """
+    Abstract base class for prompting strategies.
+
+    This class handles loading prompt templates from the filesystem
+    and provides common functionality for all strategies.
+
+    Attributes:
+        base_path (Path): Root directory containing prompt templates
+        prompts (Dict): Cached prompt templates
+    """
     def __init__(self, base_path=None):
         if base_path is None:
             current_file = Path(__file__).parent

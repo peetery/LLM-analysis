@@ -1,13 +1,34 @@
+"""
+Multi-Run Experiment Results Aggregator.
+
+This module provides tools for aggregating results from multiple experimental runs
+and computing statistical summaries. It is used to analyze the consistency and
+reliability of test generation across repeated experiments.
+
+The aggregator:
+    - Identifies all run directories (run_001, run_002, etc.) for experiments
+    - Extracts key metrics from analysis results
+    - Computes statistical measures (mean, std, min, max)
+    - Generates JSON and Markdown reports with aggregated data
+    - Calculates stability metrics (coefficient of variation)
+
+Usage:
+    python aggregate_runs.py --experiment-path PATH
+    python aggregate_runs.py --results-dir cli_results
+"""
 
 import json
 import sys
 import logging
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from statistics import mean, stdev
 from datetime import datetime
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
 
@@ -160,7 +181,10 @@ def aggregate_experiment_runs(experiment_path: Path) -> Dict[str, Any]:
         values = [m.get(metric_name, 0) for m in all_metrics]
         aggregated['statistics'][metric_name] = compute_statistics(values)
 
-    logger.info(f"✅ Aggregated {len(all_metrics)} runs successfully")
+    logger.info(
+        "Successfully aggregated %d runs",
+        len(all_metrics)
+    )
 
     return aggregated
 
@@ -247,7 +271,7 @@ def generate_markdown_report(aggregated_data: List[Dict[str, Any]], output_file:
         ])
 
     output_file.write_text('\n'.join(lines), encoding='utf-8')
-    logger.info(f"✅ Markdown report saved to: {output_file}")
+    logger.info("Markdown report saved to: %s", output_file)
 
 
 def process_results_directory(results_dir: Path) -> List[Dict[str, Any]]:
@@ -331,7 +355,7 @@ Examples:
     with open(output_file, 'w', encoding='utf-8') as f:
         json.dump(aggregated_results, f, indent=2, ensure_ascii=False)
 
-    logger.info(f"✅ Aggregated results saved to: {output_file}")
+    logger.info("Aggregated results saved to: %s", output_file)
 
     markdown_file = Path(args.markdown)
     generate_markdown_report(aggregated_results, markdown_file)
