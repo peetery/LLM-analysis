@@ -20,8 +20,9 @@
     "killed": 0,
     "survived": 0,
     "timeout": 0,
-    "mutation_score": 0.0,
-    "status": "skipped_windows"
+    "suspicious": 0,
+    "skipped": 0,
+    "mutation_score": 0.0
   },
   "scenarios": {
     "total_test_methods": 68,

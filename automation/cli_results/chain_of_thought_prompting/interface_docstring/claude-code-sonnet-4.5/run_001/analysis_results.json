@@ -16,12 +16,13 @@
     "partial_coverage": 0
   },
   "mutation": {
-    "total_mutants": 0,
-    "killed": 0,
-    "survived": 0,
+    "total_mutants": 217,
+    "killed": 113,
+    "survived": 104,
     "timeout": 0,
-    "mutation_score": 0.0,
-    "status": "skipped_windows"
+    "suspicious": 0,
+    "skipped": 0,
+    "mutation_score": 52.1
   },
   "scenarios": {
     "total_test_methods": 155,
@@ -389,10 +390,10 @@
     "branch_coverage": 98,
     "missing_statements": 1,
     "total_statements": 93,
-    "mutation_score": 0.0,
-    "mutants_killed": 0,
-    "mutants_survived": 0,
-    "total_mutants": 0,
+    "mutation_score": 52.1,
+    "mutants_killed": 113,
+    "mutants_survived": 104,
+    "total_mutants": 217,
     "total_test_methods": 155,
     "total_assertions": 176,
     "tests_with_error_handling": 49,
