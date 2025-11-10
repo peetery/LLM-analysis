@@ -1,0 +1,23 @@
+Category,Name,Count,Details
+Tested Method,__init__,6,Called 6 times in tests
+Tested Method,add_item,22,Called 22 times in tests
+Tested Method,remove_item,3,Called 3 times in tests
+Tested Method,get_subtotal,2,Called 2 times in tests
+Tested Method,apply_discount,5,Called 5 times in tests
+Tested Method,calculate_shipping,4,Called 4 times in tests
+Tested Method,calculate_tax,2,Called 2 times in tests
+Tested Method,calculate_total,5,Called 5 times in tests
+Tested Method,total_items,6,Called 6 times in tests
+Tested Method,list_items,2,Called 2 times in tests
+Tested Method,is_empty,8,Called 8 times in tests
+Tested Method,clear_order,3,Called 3 times in tests
+Potential Duplicate,test_add_item_existing_updates_quantity <-> test_total_items_sum_of_quantities,84.4,"Similarity: 84.4% (lines 36, 134)"
+Potential Duplicate,test_add_item_negative_price_raises_error <-> test_add_item_zero_or_negative_quantity_raises_error,100.0,"Similarity: 100.0% (lines 42, 46)"
+Potential Duplicate,test_apply_discount_valid <-> test_apply_discount_zero,86.7,"Similarity: 86.7% (lines 80, 83)"
+Potential Duplicate,test_apply_discount_valid <-> test_apply_discount_one_hundred_percent,86.7,"Similarity: 86.7% (lines 80, 86)"
+Potential Duplicate,test_apply_discount_zero <-> test_apply_discount_one_hundred_percent,100.0,"Similarity: 100.0% (lines 83, 86)"
+Potential Duplicate,test_apply_discount_negative_raises_error <-> test_apply_discount_over_one_hundred_percent_raises_error,86.7,"Similarity: 86.7% (lines 89, 93)"
+Potential Duplicate,test_calculate_shipping_below_threshold <-> test_calculate_shipping_zero_subtotal,90.0,"Similarity: 90.0% (lines 97, 106)"
+Potential Duplicate,test_calculate_total_no_discount_paid_shipping <-> test_calculate_total_with_discount,83.3,"Similarity: 83.3% (lines 115, 119)"
+Potential Duplicate,test_calculate_total_with_discount <-> test_calculate_total_with_discount_and_free_shipping,82.9,"Similarity: 82.9% (lines 119, 127)"
+Potential Duplicate,test_calculate_total_with_free_shipping <-> test_calculate_total_with_discount_and_free_shipping,88.0,"Similarity: 88.0% (lines 123, 127)"

@@ -1,0 +1,23 @@
+Category,Name,Count,Details
+Tested Method,__init__,54,Called 54 times in tests
+Tested Method,add_item,35,Called 35 times in tests
+Tested Method,remove_item,7,Called 7 times in tests
+Tested Method,get_subtotal,12,Called 12 times in tests
+Tested Method,apply_discount,6,Called 6 times in tests
+Tested Method,calculate_shipping,5,Called 5 times in tests
+Tested Method,calculate_tax,3,Called 3 times in tests
+Tested Method,calculate_total,6,Called 6 times in tests
+Tested Method,total_items,11,Called 11 times in tests
+Tested Method,list_items,9,Called 9 times in tests
+Tested Method,is_empty,14,Called 14 times in tests
+Tested Method,clear_order,3,Called 3 times in tests
+Potential Duplicate,test_add_multiple_items_specified_quantities <-> test_add_existing_item_updates_quantity,84.4,"Similarity: 84.4% (lines 41, 49)"
+Potential Duplicate,test_apply_valid_percentage_discount <-> test_apply_zero_discount,86.7,"Similarity: 86.7% (lines 135, 140)"
+Potential Duplicate,test_apply_negative_discount_percentage_raises_error <-> test_apply_discount_greater_than_one_raises_error,86.7,"Similarity: 86.7% (lines 150, 155)"
+Potential Duplicate,test_apply_negative_discount_percentage_raises_error <-> test_apply_discount_negative_subtotal_raises_error,86.7,"Similarity: 86.7% (lines 150, 160)"
+Potential Duplicate,test_calculate_shipping_below_threshold <-> test_calculate_shipping_above_threshold,90.0,"Similarity: 90.0% (lines 165, 170)"
+Potential Duplicate,test_calculate_shipping_below_threshold <-> test_calculate_shipping_at_threshold,93.3,"Similarity: 93.3% (lines 165, 175)"
+Potential Duplicate,test_calculate_shipping_below_threshold <-> test_calculate_shipping_zero_subtotal,93.3,"Similarity: 93.3% (lines 165, 180)"
+Potential Duplicate,test_calculate_shipping_above_threshold <-> test_calculate_shipping_at_threshold,93.3,"Similarity: 93.3% (lines 170, 175)"
+Potential Duplicate,test_calculate_shipping_above_threshold <-> test_calculate_shipping_zero_subtotal,93.3,"Similarity: 93.3% (lines 170, 180)"
+Potential Duplicate,test_calculate_shipping_at_threshold <-> test_calculate_shipping_zero_subtotal,100.0,"Similarity: 100.0% (lines 175, 180)"
