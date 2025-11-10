@@ -10,7 +10,8 @@ Authentication:
     The parent Claude Code process handles all authentication.
 
 Available Models:
-    - claude-sonnet-4-5-20250929: Latest Claude Sonnet 4.5 (recommended)
+    - claude-sonnet-4-5-20250929: Latest Claude Sonnet 4.5 (recommended, fast)
+    - claude-opus-4-1-20250805: Claude Opus 4.1 (most capable, coding focused)
 
 Technical Details:
     - Uses JSON output format for structured responses
@@ -46,10 +47,12 @@ class ClaudeCodeClient(BaseCLIClient):
 
     SUPPORTED_MODELS = [
         "claude-sonnet-4-5-20250929",
+        "claude-opus-4-1-20250805",
     ]
 
     MODEL_ALIASES = {
         "claude-sonnet-4.5": "claude-sonnet-4-5-20250929",
+        "claude-opus-4.1": "claude-opus-4-1-20250805",
     }
 
     def __init__(self, model: str = "claude-sonnet-4.5", timeout: int = 300):
