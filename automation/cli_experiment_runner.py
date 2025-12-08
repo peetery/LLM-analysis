@@ -42,11 +42,13 @@ class CLIExperimentRunner:
         self.run_id = run_id
 
         self.cli_clients = {
-            # Claude Code models
+            # Claude Code models (newest first)
+            'claude-code-opus-4.5': lambda: ClaudeCodeClient(model="claude-opus-4.5"),
             'claude-code-sonnet-4.5': lambda: ClaudeCodeClient(model="claude-sonnet-4.5"),
             'claude-code-opus-4.1': lambda: ClaudeCodeClient(model="claude-opus-4.1"),
 
-            # Gemini CLI models
+            # Gemini CLI models (newest first)
+            'gemini-3-pro': lambda: GeminiCLIClient(model="gemini-3-pro"),
             'gemini-2.5-pro': lambda: GeminiCLIClient(model="gemini-2.5-pro"),
             'gemini-2.5-flash': lambda: GeminiCLIClient(model="gemini-2.5-flash"),
         }

@@ -12,9 +12,13 @@ Authentication:
         export GEMINI_API_KEY=your_api_key
 
 Available Models:
-    - gemini-2.5-pro: Gemini 2.5 Pro (most capable, general availability)
+    - gemini-3-pro: Gemini 3 Pro (newest, most capable, preview)
+    - gemini-2.5-pro: Gemini 2.5 Pro (stable, general availability)
     - gemini-2.5-flash: Gemini 2.5 Flash (fast, general availability)
     - gemini-2.0-flash: Gemini 2.0 Flash (legacy)
+
+Note: Gemini 3 Pro requires Preview Features enabled in /settings
+      and Google AI Ultra subscription or paid API key.
 
 Technical Details:
     - Uses JSON output format for structured responses
@@ -50,6 +54,7 @@ class GeminiCLIClient(BaseCLIClient):
     """
 
     SUPPORTED_MODELS = [
+        "gemini-3-pro",
         "gemini-2.5-pro",
         "gemini-2.5-flash",
         "gemini-2.5-flash-lite",
@@ -58,6 +63,7 @@ class GeminiCLIClient(BaseCLIClient):
     ]
 
     MODEL_ALIASES = {
+        "gemini-3-pro": "gemini-3-pro",
         "gemini-2.5-pro": "gemini-2.5-pro",
         "gemini-2.5-flash": "gemini-2.5-flash",
         "gemini-2.0-flash": "gemini-2.0-flash",
