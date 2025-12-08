@@ -21,9 +21,9 @@ Note: Gemini 3 Pro requires Preview Features enabled in /settings
       and Google AI Ultra subscription or paid API key.
 
 Technical Details:
-    - Uses JSON output format for structured responses
-    - Prompts are written to temporary files for Windows compatibility
-    - Tool usage is disabled via --allowed-tools "" to force text responses
+    - Uses JSON output format (-o json) for structured responses
+    - Prompts are piped via stdin (Gemini CLI 0.19+ deprecated -p flag)
+    - Uses --yolo flag for non-interactive execution
 """
 
 import subprocess
@@ -171,10 +171,9 @@ class GeminiCLIClient(BaseCLIClient):
         """
         Send prompt to Gemini CLI and retrieve the response.
 
-        This method uses the `-p --output-format json --allowed-tools ""`
-        flags for reliable non-interactive execution. The --allowed-tools ""
-        flag is critical - it prevents Gemini from using Write/Edit/Bash tools
-        and forces it to return code in the response field.
+        This method pipes the prompt via stdin and uses `-o json --yolo` flags
+        for reliable non-interactive execution. The --yolo flag auto-approves
+        all actions to avoid interactive prompts.
 
         For Chain-of-Thought prompting, the is_final_step parameter can be
         passed to add instructions for returning code.
@@ -216,16 +215,23 @@ IMPORTANT: Return the complete code in your response. Do NOT use write_file, edi
             prompt_file = f.name
 
         try:
+            # Gemini CLI 0.19+ uses positional prompt instead of -p flag
+            # Use stdin piping with type (Windows) or cat (Linux)
+            if platform.system() == "Windows":
+                pipe_cmd = f'type "{prompt_file}"'
+            else:
+                pipe_cmd = f'cat "{prompt_file}"'
+
             cmd_parts = [
-                self.command, '-p',
-                '--output-format', 'json',
-                '--allowed-tools', '""'
+                self.command,
+                '-o', 'json',  # Output format (short flag)
+                '--yolo'  # Auto-approve to avoid interactive prompts
             ]
 
             if self.model:
                 cmd_parts.extend(['-m', self.model])
 
-            cmd_str = ' '.join(cmd_parts) + f' < "{prompt_file}"'
+            cmd_str = f'{pipe_cmd} | {" ".join(cmd_parts)}'
 
             result = subprocess.run(
                 cmd_str,
