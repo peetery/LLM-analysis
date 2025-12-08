@@ -79,16 +79,30 @@ class ExperimentRunner:
 
             passing_tests = set()
             failing_tests = set()
+            current_test = None
 
             for line in result.stderr.split('\n'):
+                # Check if this line contains a test name (format: test_xxx (module.class.test_xxx))
+                test_name_match = re.search(r'^(test_\w+)\s+\(', line)
+                if test_name_match:
+                    current_test = test_name_match.group(1)
+
+                # Check for test result on this line or use current_test from previous line
                 if ' ... ok' in line:
+                    # Try to find test name on same line first (no docstring case)
                     match = re.search(r'(test_\w+)', line)
                     if match:
                         passing_tests.add(match.group(1))
+                    elif current_test:
+                        passing_tests.add(current_test)
+                        current_test = None
                 elif ' ... FAIL' in line or ' ... ERROR' in line:
                     match = re.search(r'(test_\w+)', line)
                     if match:
                         failing_tests.add(match.group(1))
+                    elif current_test:
+                        failing_tests.add(current_test)
+                        current_test = None
 
             logger.info(f"📊 Test filtering: {len(passing_tests)} passing, {len(failing_tests)} failing")
 
