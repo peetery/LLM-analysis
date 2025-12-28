@@ -13,6 +13,7 @@ Authentication:
 
 Available Models:
     - gemini-3-pro: Gemini 3 Pro (newest, most capable, preview)
+    - gemini-3-flash: Gemini 3 Flash (newest, fast, preview)
     - gemini-2.5-pro: Gemini 2.5 Pro (stable, general availability)
     - gemini-2.5-flash: Gemini 2.5 Flash (fast, general availability)
     - gemini-2.0-flash: Gemini 2.0 Flash (legacy)
@@ -55,6 +56,7 @@ class GeminiCLIClient(BaseCLIClient):
 
     SUPPORTED_MODELS = [
         "gemini-3-pro-preview",
+        "gemini-3-flash-preview",
         "gemini-2.5-pro",
         "gemini-2.5-flash",
         "gemini-2.5-flash-lite",
@@ -65,6 +67,8 @@ class GeminiCLIClient(BaseCLIClient):
     MODEL_ALIASES = {
         "gemini-3-pro": "gemini-3-pro-preview",  # Alias for convenience
         "gemini-3-pro-preview": "gemini-3-pro-preview",
+        "gemini-3-flash": "gemini-3-flash-preview",  # Alias for convenience
+        "gemini-3-flash-preview": "gemini-3-flash-preview",
         "gemini-2.5-pro": "gemini-2.5-pro",
         "gemini-2.5-flash": "gemini-2.5-flash",
         "gemini-2.0-flash": "gemini-2.0-flash",

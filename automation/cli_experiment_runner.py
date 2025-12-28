@@ -49,6 +49,7 @@ class CLIExperimentRunner:
 
             # Gemini CLI models (newest first)
             'gemini-3-pro': lambda: GeminiCLIClient(model="gemini-3-pro-preview"),
+            'gemini-3-flash': lambda: GeminiCLIClient(model="gemini-3-flash-preview"),
             'gemini-2.5-pro': lambda: GeminiCLIClient(model="gemini-2.5-pro"),
             'gemini-2.5-flash': lambda: GeminiCLIClient(model="gemini-2.5-flash"),
         }
