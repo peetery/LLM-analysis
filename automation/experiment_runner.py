@@ -294,7 +294,8 @@ class ExperimentRunner:
                     test_classes.append(node)
                     logger.debug(f"Found test class: {node.name}")
                 elif node.name in ['OrderCalculator', 'Item']:
-                    logger.debug(f"Skipping implementation class: {node.name}")
+                    logger.warning(f"⚠️  Detected copied implementation class '{node.name}' in test code - removing it")
+                    logger.warning("   (Model should import from order_calculator, not redefine the class)")
                 else:
                     test_classes.append(node)
 
@@ -316,7 +317,73 @@ class ExperimentRunner:
 
         return code
 
+    def _remove_copied_implementation_classes(self, code_text):
+        """
+        Remove any copied OrderCalculator or Item class definitions from the test code.
+        This prevents the model's copied class from shadowing the actual module import.
+        """
+        try:
+            tree = ast.parse(code_text)
+
+            classes_to_remove = []
+            for node in tree.body:
+                if isinstance(node, ast.ClassDef) and node.name in ['OrderCalculator', 'Item']:
+                    classes_to_remove.append(node.name)
+
+            if not classes_to_remove:
+                return code_text
+
+            logger.warning(f"⚠️  Removing copied implementation class(es): {', '.join(classes_to_remove)}")
+
+            # Rebuild AST without the copied classes
+            new_body = [node for node in tree.body
+                       if not (isinstance(node, ast.ClassDef) and node.name in ['OrderCalculator', 'Item'])]
+            new_tree = ast.Module(body=new_body, type_ignores=[])
+
+            try:
+                return ast.unparse(new_tree)
+            except AttributeError:
+                # Python < 3.9 fallback: use line-based removal
+                return self._remove_classes_line_based(code_text, classes_to_remove)
+
+        except SyntaxError:
+            # If code doesn't parse, try line-based removal
+            return self._remove_classes_line_based(code_text, ['OrderCalculator', 'Item'])
+
+    def _remove_classes_line_based(self, code_text, class_names):
+        """Line-based fallback for removing class definitions."""
+        lines = code_text.split('\n')
+        filtered_lines = []
+        skip_class = False
+        class_indent = 0
+
+        for line in lines:
+            stripped = line.strip()
+
+            # Check if this is a class definition we want to remove
+            for class_name in class_names:
+                if stripped.startswith(f'class {class_name}') and ('(' in stripped or ':' in stripped):
+                    skip_class = True
+                    class_indent = len(line) - len(line.lstrip())
+                    logger.warning(f"⚠️  Removing class definition: {class_name}")
+                    break
+
+            if skip_class:
+                # Check if we've exited the class (same or lower indentation, non-empty)
+                if stripped and not stripped.startswith('#'):
+                    current_indent = len(line) - len(line.lstrip())
+                    if current_indent <= class_indent and not stripped.startswith('class '):
+                        skip_class = False
+                        filtered_lines.append(line)
+            else:
+                filtered_lines.append(line)
+
+        return '\n'.join(filtered_lines)
+
     def _ensure_imports(self, code_text):
+        # First, remove any copied implementation classes
+        code_text = self._remove_copied_implementation_classes(code_text)
+
         has_import = (
             re.search(r'from\s+order_calculator\s+import.*OrderCalculator', code_text) or
             re.search(r'import\s+order_calculator', code_text)

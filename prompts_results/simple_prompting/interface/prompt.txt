@@ -11,6 +11,7 @@ Instructions:
 - Each test should be clear, minimal and atomic (test one behavior at a time).
 - Avoid comments or explanations — output only the test code.
 - Return a single valid Python file with a class extending `unittest.TestCase`.
+- IMPORTANT: Do NOT copy or redefine the OrderCalculator class in your test file. The class already exists in a separate module. Simply import it using: `from order_calculator import OrderCalculator`
 
 Below is the class interface (without implementation):
 

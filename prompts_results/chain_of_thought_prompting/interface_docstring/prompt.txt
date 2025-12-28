@@ -173,5 +173,6 @@ Follow these rules:
 - Use meaningful test method names.
 - Do not include comments or explanations.
 - Output a valid `.py` file containing only the test class.
+- IMPORTANT: Do NOT copy or redefine the OrderCalculator class in your test file. The class already exists in a separate module. Simply import it using: `from order_calculator import OrderCalculator`
 
 The output must contain only Python code.
