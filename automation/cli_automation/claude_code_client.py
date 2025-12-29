@@ -104,30 +104,32 @@ class ClaudeCodeClient(BaseCLIClient):
             True if Claude CLI is installed and working, False otherwise
         """
         try:
+            # Use --version instead of -p "test" to avoid waiting for model response
             result = subprocess.run(
-                [self.command, "-p", "test"],
+                [self.command, "--version"],
                 capture_output=True,
                 text=True,
-                timeout=30,
+                timeout=10,
                 shell=True if platform.system() == "Windows" else False
             )
 
             if result.returncode == 0:
-                logger.info("Claude CLI is installed and working")
+                version = result.stdout.strip()
+                logger.info(f"Claude CLI is installed: {version}")
                 return True
             else:
                 logger.error(
                     "Claude CLI returned error code %d",
                     result.returncode
                 )
-                logger.debug("stderr: %s", result.stderr[:200])
+                logger.debug("stderr: %s", result.stderr[:200] if result.stderr else "")
                 return False
 
         except FileNotFoundError:
             logger.error("Claude CLI not found in PATH")
             return False
         except subprocess.TimeoutExpired:
-            logger.error("Claude CLI test timed out after 30s")
+            logger.error("Claude CLI version check timed out after 10s")
             return False
         except Exception as e:
             logger.error("Error checking installation: %s", e)
