@@ -3,29 +3,42 @@ Mutation Testing Backfill Script.
 
 This script enables running mutation testing on Windows-generated test results
 by executing it in WSL/Linux where fork support is available. It identifies
-result directories without mutation results and runs mutmut analysis.
+result directories without valid mutation results and runs mutmut analysis.
 
 The script:
     - Verifies execution on Linux/WSL (required for fork support)
     - Locates the mutants directory in the repository
-    - Filters tests to include only passing tests
-    - Runs mutation testing via mutmut
+    - VALIDATES existing results (killed > 0 OR survived > 0 means valid)
+    - Re-runs mutation testing for invalid results
     - Parses results and updates analysis files
     - Generates updated summary reports
 
 Usage:
     # From WSL (not Windows):
     cd /mnt/c/Users/.../LLM-analysis/automation
+
+    # Process all experiments, skipping those with valid results
     python3 run_mutmut_backfill.py --results-dir cli_results
+
+    # Only fix experiments with invalid results (no_test_results, no_mutants)
+    python3 run_mutmut_backfill.py --results-dir cli_results --fix-invalid
+
+    # Force re-run for all experiments
+    python3 run_mutmut_backfill.py --results-dir cli_results --force
+
+    # Process specific run
+    python3 run_mutmut_backfill.py --results-dir cli_results --run-id 001
 """
 
 import sys
+import os
 import json
 import subprocess
 import logging
+import shutil
 from pathlib import Path
 from datetime import datetime
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Tuple
 
 logging.basicConfig(
     level=logging.INFO,
@@ -79,133 +92,51 @@ def find_mutants_directory() -> Optional[Path]:
     return None
 
 
-def filter_passing_tests(test_file: Path) -> str:
+def check_existing_results(experiment_dir: Path) -> Tuple[bool, str]:
     """
-    Filter test file to include only passing tests.
-
-    Runs the test suite to identify which tests pass and which fail,
-    then generates a filtered version containing only passing tests.
-    This is necessary for mutation testing, which requires all tests to pass.
-
-    Args:
-        test_file: Path to the test file to filter
+    Check if experiment has valid mutation results.
 
     Returns:
-        Filtered test code as a string
+        (is_valid, reason)
+        - (True, "valid") if results exist and are valid (killed > 0 OR survived > 0)
+        - (False, reason) if results are missing or invalid
     """
-    import ast
-    import re
+    analysis_file = experiment_dir / "analysis_results.json"
+    mutmut_results_file = experiment_dir / "mutmut_results.txt"
 
+    # Check if files exist
+    if not analysis_file.exists():
+        return False, "no_analysis_file"
+
+    if not mutmut_results_file.exists():
+        return False, "no_results_file"
+
+    if mutmut_results_file.stat().st_size == 0:
+        return False, "empty_results_file"
+
+    # Check analysis_results.json for valid mutation data
     try:
-        logger.info("Filtering tests - identifying passing tests...")
+        with open(analysis_file, 'r') as f:
+            analysis = json.load(f)
 
-        result = subprocess.run(
-            ['python3', '-m', 'unittest', test_file.stem, '-v'],
-            cwd=test_file.parent,
-            capture_output=True,
-            text=True,
-            timeout=120
-        )
+        mutation = analysis.get('mutation') or {}
+        total_mutants = mutation.get('total_mutants', 0)
+        killed = mutation.get('killed', 0)
+        survived = mutation.get('survived', 0)
 
-        passing_tests = set()
-        failing_tests = set()
-
-        for line in result.stderr.split('\n'):
-            if ' ... ok' in line:
-                match = re.search(r'(test_\w+)', line)
-                if match:
-                    passing_tests.add(match.group(1))
-            elif ' ... FAIL' in line or ' ... ERROR' in line:
-                match = re.search(r'(test_\w+)', line)
-                if match:
-                    failing_tests.add(match.group(1))
-
-        logger.info(
-            "Test filtering: %d passing, %d failing",
-            len(passing_tests), len(failing_tests)
-        )
-
-        if not passing_tests:
-            logger.warning("No passing tests found - using original file")
-            return test_file.read_text()
-
-        if not failing_tests:
-            logger.info("All tests pass - no filtering needed")
-            return test_file.read_text()
-
-        test_content = test_file.read_text()
-        tree = ast.parse(test_content)
-
-        filtered_tree = ast.parse("")
-
-        for node in tree.body:
-            if isinstance(node, ast.ClassDef):
-                new_class = ast.ClassDef(
-                    name=node.name,
-                    bases=node.bases,
-                    keywords=node.keywords,
-                    body=[],
-                    decorator_list=node.decorator_list
-                )
-
-                for item in node.body:
-                    if isinstance(item, ast.FunctionDef):
-                        if (item.name in ['setUp', 'tearDown'] or
-                            item.name in passing_tests):
-                            new_class.body.append(item)
-                    else:
-                        new_class.body.append(item)
-
-                if any(isinstance(item, ast.FunctionDef) and item.name.startswith('test_')
-                       for item in new_class.body):
-                    filtered_tree.body.append(new_class)
-            else:
-                filtered_tree.body.append(node)
-
-        try:
-            filtered_content = ast.unparse(filtered_tree)
-            logger.info(f"Filtered out {len(failing_tests)} failing tests")
-            return filtered_content
-        except AttributeError:
-            logger.warning("ast.unparse not available - using line-based filtering")
-            return filter_tests_line_based(test_content, failing_tests)
-
-    except Exception as e:
-        logger.error(f"Test filtering failed: {e} - using original file")
-        return test_file.read_text()
-
-
-def filter_tests_line_based(test_content: str, failing_tests: set) -> str:
-    lines = test_content.split('\n')
-    filtered_lines = []
-    skip_until_next_method = False
-    current_indent = 0
-
-    for line in lines:
-        stripped = line.strip()
-
-        if stripped.startswith('def test_'):
-            method_name = stripped.split('(')[0].replace('def ', '')
-
-            if method_name in failing_tests:
-                skip_until_next_method = True
-                current_indent = len(line) - len(line.lstrip())
-                continue
-            else:
-                skip_until_next_method = False
-                filtered_lines.append(line)
-        elif skip_until_next_method:
-            line_indent = len(line) - len(line.lstrip())
-            if line.strip() and line_indent <= current_indent:
-                skip_until_next_method = False
-                filtered_lines.append(line)
+        # Valid if: has mutants AND (killed > 0 OR survived > 0)
+        if total_mutants > 0 and (killed > 0 or survived > 0):
+            return True, "valid"
+        elif total_mutants == 0:
+            return False, "no_mutants"
         else:
-            filtered_lines.append(line)
+            return False, "no_test_results"  # Has mutants but killed=0 AND survived=0
 
-    return '\n'.join(filtered_lines)
+    except (json.JSONDecodeError, Exception) as e:
+        return False, f"json_error: {e}"
 
 
-def run_mutmut_for_experiment(experiment_dir: Path, mutants_dir: Path):
+def run_mutmut_for_experiment(experiment_dir: Path, mutants_dir: Path, force: bool = False):
     logger.info(f"\n{'='*60}")
     try:
         rel_path = experiment_dir.relative_to(Path.cwd())
@@ -219,13 +150,26 @@ def run_mutmut_for_experiment(experiment_dir: Path, mutants_dir: Path):
         logger.warning(f"No mutmut_test.py found - skipping")
         return False
 
+    # Define mutmut_results_file path
     mutmut_results_file = experiment_dir / "mutmut_results.txt"
-    if mutmut_results_file.exists() and mutmut_results_file.stat().st_size > 0:
-        logger.info(f"Mutation results already exist - skipping")
-        return False
+
+    # Check if valid results already exist
+    if not force:
+        is_valid, reason = check_existing_results(experiment_dir)
+        if is_valid:
+            logger.info(f"Valid mutation results exist - skipping")
+            return False
+        elif reason in ["no_test_results", "no_mutants"]:
+            logger.info(f"Invalid results found ({reason}) - will re-run mutmut")
+            # Delete invalid results so we re-run
+            if mutmut_results_file.exists():
+                mutmut_results_file.unlink()
+                logger.info(f"Deleted invalid results file")
+        else:
+            logger.info(f"No valid results ({reason}) - will run mutmut")
 
     try:
-        test_content = filter_passing_tests(test_file)
+        test_content = test_file.read_text()  # mutmut_test.py is already filtered by experiment_runner
 
         if 'from order_calculator import' in test_content or 'import order_calculator' in test_content:
             import_fix = """import sys
@@ -248,18 +192,51 @@ sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
         test_dst = mutants_dir / "tests" / "mutmut_test.py"
         test_dst.parent.mkdir(exist_ok=True)
         test_dst.write_text(test_content)
-        logger.info(f"Wrote filtered test to {test_dst} (fixed imports for src-layout)")
+        logger.info(f"Copied test to {test_dst} (fixed imports for src-layout)")
 
-        logger.info("Cleaning mutmut cache...")
+        logger.info("Cleaning mutmut cache and temp files...")
+        # Remove .mutmut-cache files
         for cache_file in mutants_dir.glob(".mutmut-cache*"):
-            cache_file.unlink()
+            try:
+                cache_file.unlink()
+            except:
+                pass
 
+        # Remove meta files
         for meta_file in mutants_dir.rglob("*.meta"):
-            meta_file.unlink()
+            try:
+                meta_file.unlink()
+            except:
+                pass
+
+        # Remove pyproject.toml (conflicts with setup.cfg in mutmut 3.x)
+        pyproject_file = mutants_dir / "pyproject.toml"
+        if pyproject_file.exists():
+            try:
+                pyproject_file.unlink()
+                logger.info("Removed pyproject.toml (conflicts with setup.cfg)")
+            except:
+                pass
+
+        # Remove .coverage file
+        coverage_file = mutants_dir / ".coverage"
+        if coverage_file.exists():
+            try:
+                coverage_file.unlink()
+            except:
+                pass
+
+        # Remove mutants directory (mutmut output cache)
+        mutants_output_dir = mutants_dir / "mutants"
+        if mutants_output_dir.exists():
+            try:
+                shutil.rmtree(mutants_output_dir)
+            except:
+                pass
 
         logger.info("Running mutmut... (this may take 5-10 minutes)")
         run_result = subprocess.run(
-            ['mutmut', 'run'],
+            ['mutmut', 'run'], env={**os.environ, 'PATH': os.environ.get('PATH', '') + ':' + str(Path.home() / '.local' / 'bin')},
             cwd=mutants_dir,
             capture_output=True,
             text=True,
@@ -273,7 +250,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
             logger.warning(f"Mutmut run returned code {run_result.returncode}")
 
         results_result = subprocess.run(
-            ['mutmut', 'results'],
+            ['mutmut', 'results'], env={**os.environ, 'PATH': os.environ.get('PATH', '') + ':' + str(Path.home() / '.local' / 'bin')},
             cwd=mutants_dir,
             capture_output=True,
             text=True
@@ -556,7 +533,7 @@ def regenerate_markdown_summary(experiment_dir: Path):
     logger.info(f"Regenerated {md_file}")
 
 
-def process_results_directory(results_dir: Path, run_id_filter: str = None):
+def process_results_directory(results_dir: Path, run_id_filter: str = None, force: bool = False, fix_invalid: bool = False):
     check_platform()
 
     mutants_dir = find_mutants_directory()
@@ -569,6 +546,12 @@ def process_results_directory(results_dir: Path, run_id_filter: str = None):
     if run_id_filter:
         logger.info(f"Filtering for run ID: run_{run_id_filter}")
 
+    if fix_invalid:
+        logger.info(f"Fix-invalid mode: only processing experiments with invalid results")
+
+    if force:
+        logger.info(f"Force mode: will re-run mutmut even for valid results")
+
     experiment_dirs = []
     for test_file in results_dir.rglob("mutmut_test.py"):
         exp_dir = test_file.parent
@@ -576,6 +559,14 @@ def process_results_directory(results_dir: Path, run_id_filter: str = None):
         if run_id_filter:
             if f"run_{run_id_filter}" not in str(exp_dir):
                 continue
+
+        # If fix_invalid mode, only include experiments with invalid results
+        if fix_invalid:
+            is_valid, reason = check_existing_results(exp_dir)
+            if is_valid:
+                continue  # Skip valid experiments
+            if reason not in ["no_test_results", "no_mutants", "no_results_file", "empty_results_file"]:
+                continue  # Skip experiments with other issues (like no analysis file)
 
         experiment_dirs.append(exp_dir)
 
@@ -593,7 +584,7 @@ def process_results_directory(results_dir: Path, run_id_filter: str = None):
     failed_count = 0
 
     for exp_dir in experiment_dirs:
-        success = run_mutmut_for_experiment(exp_dir, mutants_dir)
+        success = run_mutmut_for_experiment(exp_dir, mutants_dir, force=force)
         if success:
             processed_count += 1
         elif success is False:
@@ -637,6 +628,10 @@ Examples:
                         help='Process single experiment directory')
     parser.add_argument('--run-id', type=str, default=None,
                         help='Filter by run ID (e.g., "001" for run_001, "002" for run_002)')
+    parser.add_argument('--force', action='store_true',
+                        help='Re-run mutmut even for experiments with valid results')
+    parser.add_argument('--fix-invalid', action='store_true',
+                        help='Only process experiments with invalid results (no_test_results, no_mutants)')
 
     args = parser.parse_args()
 
@@ -652,14 +647,14 @@ Examples:
             logger.error(f"Experiment directory not found: {exp_dir}")
             sys.exit(1)
 
-        run_mutmut_for_experiment(exp_dir, mutants_dir)
+        run_mutmut_for_experiment(exp_dir, mutants_dir, force=args.force)
     else:
         results_dir = Path(args.results_dir)
         if not results_dir.exists():
             logger.error(f"Results directory not found: {results_dir}")
             sys.exit(1)
 
-        process_results_directory(results_dir, run_id_filter=args.run_id)
+        process_results_directory(results_dir, run_id_filter=args.run_id, force=args.force, fix_invalid=args.fix_invalid)
 
 
 if __name__ == "__main__":

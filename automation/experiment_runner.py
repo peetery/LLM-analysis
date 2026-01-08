@@ -3,6 +3,7 @@ import subprocess
 import logging
 import re
 import ast
+import difflib
 from pathlib import Path
 from datetime import datetime
 import shutil
@@ -804,57 +805,81 @@ class ExperimentRunner:
         }
 
     def detect_duplicate_tests(self, tests_file):
+        """
+        Detect duplicate tests using text-based similarity on test body.
+
+        Uses difflib.SequenceMatcher to compare normalized test bodies.
+        Threshold: 99.5% similarity for true duplicates (copy-paste with minor changes).
+
+        Returns:
+            - total_tests_analyzed: number of test methods found
+            - duplicate_pairs_found: number of pairs with >=99.5% similarity
+            - unique_duplicate_tests: count of unique tests involved in duplicates
+            - duplicates: list of duplicate pairs (max 10)
+        """
         try:
             test_content = tests_file.read_text()
             tree = ast.parse(test_content)
+            lines = test_content.split('\n')
 
-            test_signatures = []
-
+            # Extract test functions with their source code
+            test_functions = []
             for node in ast.walk(tree):
                 if isinstance(node, ast.FunctionDef) and node.name.startswith('test_'):
-                    signature = {
+                    # Get source code of the function body (excluding def line)
+                    start_line = node.lineno  # 1-indexed, this is the def line
+                    end_line = node.end_lineno
+
+                    # Extract body lines (skip the def line)
+                    body_lines = lines[start_line:end_line]  # start_line is 1-indexed, so this skips def
+
+                    # Normalize: strip whitespace, join non-empty lines
+                    normalized_body = '\n'.join(
+                        line.strip() for line in body_lines if line.strip()
+                    )
+
+                    test_functions.append({
                         'name': node.name,
                         'line': node.lineno,
-                        'method_calls': [],
-                        'assertions': [],
-                        'literals': []
-                    }
+                        'body': normalized_body
+                    })
 
-                    for child in ast.walk(node):
-                        if isinstance(child, ast.Call):
-                            if isinstance(child.func, ast.Attribute):
-                                signature['method_calls'].append(child.func.attr)
-
-                        if isinstance(child, ast.Call) and isinstance(child.func, ast.Attribute):
-                            if child.func.attr.startswith('assert'):
-                                signature['assertions'].append(child.func.attr)
-
-                        if isinstance(child, (ast.Constant, ast.Num, ast.Str)):
-                            value = child.value if isinstance(child, ast.Constant) else (
-                                child.n if isinstance(child, ast.Num) else child.s
-                            )
-                            if isinstance(value, (int, float, str)) and value not in [0, 1, '']:
-                                signature['literals'].append(value)
-
-                    test_signatures.append(signature)
-
+            # Find duplicates using text similarity on normalized body
             duplicates = []
-            for i, sig1 in enumerate(test_signatures):
-                for sig2 in test_signatures[i+1:]:
-                    similarity_score = self._calculate_test_similarity(sig1, sig2)
+            duplicate_tests = set()  # Track unique tests that are duplicates
 
-                    if similarity_score > 0.8:
+            for i, test1 in enumerate(test_functions):
+                for test2 in test_functions[i+1:]:
+                    # Skip if bodies are too different in length (optimization)
+                    len1, len2 = len(test1['body']), len(test2['body'])
+                    if len1 == 0 or len2 == 0:
+                        continue
+                    if min(len1, len2) / max(len1, len2) < 0.8:
+                        continue
+
+                    # Compare normalized bodies using SequenceMatcher
+                    similarity = difflib.SequenceMatcher(
+                        None,
+                        test1['body'],
+                        test2['body']
+                    ).ratio()
+
+                    # 99.5% threshold for true duplicates (copy-paste only)
+                    if similarity >= 0.995:
                         duplicates.append({
-                            'test1': sig1['name'],
-                            'test1_line': sig1['line'],
-                            'test2': sig2['name'],
-                            'test2_line': sig2['line'],
-                            'similarity': round(similarity_score * 100, 1)
+                            'test1': test1['name'],
+                            'test1_line': test1['line'],
+                            'test2': test2['name'],
+                            'test2_line': test2['line'],
+                            'similarity': round(similarity * 100, 1)
                         })
+                        duplicate_tests.add(test1['name'])
+                        duplicate_tests.add(test2['name'])
 
             return {
-                'total_tests_analyzed': len(test_signatures),
+                'total_tests_analyzed': len(test_functions),
                 'duplicate_pairs_found': len(duplicates),
+                'unique_duplicate_tests': len(duplicate_tests),
                 'duplicates': duplicates[:10]
             }
 
@@ -863,42 +888,10 @@ class ExperimentRunner:
             return {
                 'total_tests_analyzed': 0,
                 'duplicate_pairs_found': 0,
+                'unique_duplicate_tests': 0,
                 'duplicates': [],
                 'error': str(e)
             }
-
-    def _calculate_test_similarity(self, sig1, sig2):
-        calls1 = set(sig1['method_calls'])
-        calls2 = set(sig2['method_calls'])
-
-        if not calls1 and not calls2:
-            call_similarity = 1.0
-        elif not calls1 or not calls2:
-            call_similarity = 0.0
-        else:
-            call_similarity = len(calls1 & calls2) / len(calls1 | calls2)
-
-        asserts1 = set(sig1['assertions'])
-        asserts2 = set(sig2['assertions'])
-
-        if not asserts1 and not asserts2:
-            assert_similarity = 1.0
-        elif not asserts1 or not asserts2:
-            assert_similarity = 0.0
-        else:
-            assert_similarity = len(asserts1 & asserts2) / len(asserts1 | asserts2)
-
-        lits1 = set(sig1['literals'])
-        lits2 = set(sig2['literals'])
-
-        if not lits1 and not lits2:
-            lit_similarity = 1.0
-        elif not lits1 or not lits2:
-            lit_similarity = 0.0
-        else:
-            lit_similarity = len(lits1 & lits2) / len(lits1 | lits2)
-
-        return (call_similarity * 0.5) + (assert_similarity * 0.3) + (lit_similarity * 0.2)
 
     def analyze_assertion_quality(self, tests_file):
         try:
@@ -1341,7 +1334,10 @@ class ExperimentRunner:
             summary['method_coverage_rate'] = tested_methods.get('method_coverage_rate', 0)
 
             duplicates = scen.get('duplicates', {})
-            summary['duplicate_tests_found'] = duplicates.get('duplicate_pairs_found', 0)
+            # Use unique_duplicate_tests (actual count of duplicate tests, not pairs)
+            # Fall back to duplicate_pairs_found for backward compatibility with old data
+            summary['duplicate_tests_found'] = duplicates.get('unique_duplicate_tests',
+                                                               duplicates.get('duplicate_pairs_found', 0))
 
             if summary['total_test_methods'] > 0:
                 summary['avg_assertions_per_test'] = round(summary['total_assertions'] / summary['total_test_methods'], 2)
@@ -1475,7 +1471,7 @@ class ExperimentRunner:
 - Average test length (LOC): {summary.get('average_test_length', 0)}
 
 ### Code Quality
-- Potential duplicate tests found: {summary.get('duplicate_tests_found', 0)}
+- Duplicate tests found (>=99.5% similarity): {summary.get('duplicate_tests_found', 0)}
 
 ## Advanced Quality Analysis
 
