@@ -1,0 +1,23 @@
+Category,Name,Count,Details
+Tested Method,__init__,6,Called 6 times in tests
+Tested Method,add_item,25,Called 25 times in tests
+Tested Method,remove_item,4,Called 4 times in tests
+Tested Method,get_subtotal,3,Called 3 times in tests
+Tested Method,apply_discount,5,Called 5 times in tests
+Tested Method,calculate_shipping,4,Called 4 times in tests
+Tested Method,calculate_tax,3,Called 3 times in tests
+Tested Method,calculate_total,4,Called 4 times in tests
+Tested Method,total_items,6,Called 6 times in tests
+Tested Method,list_items,4,Called 4 times in tests
+Tested Method,is_empty,6,Called 6 times in tests
+Tested Method,clear_order,2,Called 2 times in tests
+Potential Duplicate,test_add_item_specific_quantity <-> test_total_items_sum_of_quantities,82.9,"Similarity: 82.9% (lines 34, 151)"
+Potential Duplicate,test_add_existing_item_updates_quantity <-> test_total_items_sum_of_quantities,85.7,"Similarity: 85.7% (lines 44, 151)"
+Potential Duplicate,test_add_item_negative_price_raises_value_error <-> test_add_item_zero_quantity_raises_value_error,100.0,"Similarity: 100.0% (lines 53, 57)"
+Potential Duplicate,test_add_item_negative_price_raises_value_error <-> test_add_item_negative_quantity_raises_value_error,100.0,"Similarity: 100.0% (lines 53, 61)"
+Potential Duplicate,test_add_item_zero_quantity_raises_value_error <-> test_add_item_negative_quantity_raises_value_error,100.0,"Similarity: 100.0% (lines 57, 61)"
+Potential Duplicate,test_apply_discount_standard <-> test_apply_discount_zero,86.7,"Similarity: 86.7% (lines 91, 95)"
+Potential Duplicate,test_apply_discount_standard <-> test_apply_discount_full,86.7,"Similarity: 86.7% (lines 91, 99)"
+Potential Duplicate,test_apply_discount_standard <-> test_apply_discount_over_subtotal_caps_at_zero,85.0,"Similarity: 85.0% (lines 91, 103)"
+Potential Duplicate,test_apply_discount_zero <-> test_apply_discount_full,100.0,"Similarity: 100.0% (lines 95, 99)"
+Potential Duplicate,test_apply_discount_zero <-> test_apply_discount_over_subtotal_caps_at_zero,90.0,"Similarity: 90.0% (lines 95, 103)"

@@ -1,0 +1,19 @@
+Category,Name,Count,Details
+Tested Method,__init__,4,Called 4 times in tests
+Tested Method,add_item,19,Called 19 times in tests
+Tested Method,remove_item,2,Called 2 times in tests
+Tested Method,get_subtotal,2,Called 2 times in tests
+Tested Method,apply_discount,5,Called 5 times in tests
+Tested Method,calculate_shipping,3,Called 3 times in tests
+Tested Method,calculate_tax,2,Called 2 times in tests
+Tested Method,calculate_total,3,Called 3 times in tests
+Tested Method,total_items,4,Called 4 times in tests
+Tested Method,list_items,4,Called 4 times in tests
+Tested Method,is_empty,4,Called 4 times in tests
+Tested Method,clear_order,1,Called 1 times in tests
+Potential Duplicate,test_add_item_invalid_name <-> test_add_item_invalid_quantity,90.0,"Similarity: 90.0% (lines 35, 43)"
+Potential Duplicate,test_add_item_invalid_price <-> test_add_item_invalid_quantity,90.0,"Similarity: 90.0% (lines 39, 43)"
+Potential Duplicate,test_apply_discount_standard <-> test_apply_discount_zero,86.7,"Similarity: 86.7% (lines 92, 97)"
+Potential Duplicate,test_apply_discount_standard <-> test_apply_discount_full,86.7,"Similarity: 86.7% (lines 92, 102)"
+Potential Duplicate,test_apply_discount_zero <-> test_apply_discount_full,100.0,"Similarity: 100.0% (lines 97, 102)"
+Potential Duplicate,test_apply_discount_invalid_negative <-> test_apply_discount_invalid_excessive,86.7,"Similarity: 86.7% (lines 107, 111)"

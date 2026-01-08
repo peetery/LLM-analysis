@@ -1,0 +1,23 @@
+Category,Name,Count,Details
+Tested Method,__init__,51,Called 51 times in tests
+Tested Method,add_item,28,Called 28 times in tests
+Tested Method,remove_item,4,Called 4 times in tests
+Tested Method,get_subtotal,3,Called 3 times in tests
+Tested Method,apply_discount,8,Called 8 times in tests
+Tested Method,calculate_shipping,4,Called 4 times in tests
+Tested Method,calculate_tax,4,Called 4 times in tests
+Tested Method,calculate_total,5,Called 5 times in tests
+Tested Method,total_items,1,Called 1 times in tests
+Tested Method,list_items,1,Called 1 times in tests
+Tested Method,is_empty,5,Called 5 times in tests
+Tested Method,clear_order,1,Called 1 times in tests
+Potential Duplicate,test_init_shipping_cost_type_error <-> test_init_threshold_value_error,100.0,"Similarity: 100.0% (lines 27, 39)"
+Potential Duplicate,test_add_item_success_default_qty <-> test_add_item_success_custom_qty,82.9,"Similarity: 82.9% (lines 47, 54)"
+Potential Duplicate,test_add_item_success_default_qty <-> test_add_item_increment_quantity,82.5,"Similarity: 82.5% (lines 47, 59)"
+Potential Duplicate,test_add_item_success_custom_qty <-> test_add_item_increment_quantity,82.5,"Similarity: 82.5% (lines 54, 59)"
+Potential Duplicate,test_add_item_name_type_error <-> test_add_item_empty_name_error,90.0,"Similarity: 90.0% (lines 66, 81)"
+Potential Duplicate,test_add_item_price_type_error <-> test_add_item_quantity_type_error,86.7,"Similarity: 86.7% (lines 71, 76)"
+Potential Duplicate,test_add_item_price_type_error <-> test_add_item_invalid_price_error,90.0,"Similarity: 90.0% (lines 71, 86)"
+Potential Duplicate,test_add_item_price_type_error <-> test_add_item_invalid_quantity_error,90.0,"Similarity: 90.0% (lines 71, 91)"
+Potential Duplicate,test_add_item_price_type_error <-> test_add_item_conflicting_price_error,86.7,"Similarity: 86.7% (lines 71, 96)"
+Potential Duplicate,test_add_item_quantity_type_error <-> test_add_item_invalid_price_error,90.0,"Similarity: 90.0% (lines 76, 86)"

@@ -1,0 +1,21 @@
+Category,Name,Count,Details
+Tested Method,__init__,43,Called 43 times in tests
+Tested Method,add_item,23,Called 23 times in tests
+Tested Method,remove_item,5,Called 5 times in tests
+Tested Method,get_subtotal,4,Called 4 times in tests
+Tested Method,apply_discount,6,Called 6 times in tests
+Tested Method,calculate_shipping,6,Called 6 times in tests
+Tested Method,calculate_tax,3,Called 3 times in tests
+Tested Method,calculate_total,3,Called 3 times in tests
+Tested Method,total_items,5,Called 5 times in tests
+Tested Method,list_items,4,Called 4 times in tests
+Tested Method,is_empty,6,Called 6 times in tests
+Tested Method,clear_order,1,Called 1 times in tests
+Potential Duplicate,test_add_item_invalid_price <-> test_add_item_invalid_quantity,100.0,"Similarity: 100.0% (lines 53, 58)"
+Potential Duplicate,test_add_item_invalid_price <-> test_add_item_conflicting_price,86.7,"Similarity: 86.7% (lines 53, 63)"
+Potential Duplicate,test_add_item_invalid_quantity <-> test_add_item_conflicting_price,86.7,"Similarity: 86.7% (lines 58, 63)"
+Potential Duplicate,test_apply_discount_zero <-> test_apply_discount_full,100.0,"Similarity: 100.0% (lines 112, 116)"
+Potential Duplicate,test_calculate_shipping_below_threshold <-> test_calculate_shipping_above_threshold,90.0,"Similarity: 90.0% (lines 130, 134)"
+Potential Duplicate,test_calculate_shipping_below_threshold <-> test_calculate_shipping_at_threshold,93.3,"Similarity: 93.3% (lines 130, 138)"
+Potential Duplicate,test_calculate_shipping_above_threshold <-> test_calculate_shipping_at_threshold,93.3,"Similarity: 93.3% (lines 134, 138)"
+Potential Duplicate,test_calculate_total_with_discount <-> test_calculate_total_no_discount,91.4,"Similarity: 91.4% (lines 160, 165)"

@@ -1,0 +1,312 @@
+{
+  "compilation": {
+    "compilation_success": true,
+    "execution_success": false,
+    "tests_run": 72,
+    "tests_passed": 71,
+    "tests_failed": 1,
+    "test_errors": [],
+    "compilation_errors": []
+  },
+  "coverage": {
+    "statements": 93,
+    "missing": 1,
+    "coverage_percent": 99,
+    "branch_coverage_percent": 98,
+    "partial_coverage": 0
+  },
+  "mutation": {
+    "total_mutants": 217,
+    "killed": 35,
+    "survived": 121,
+    "timeout": 0,
+    "suspicious": 0,
+    "skipped": 0,
+    "mutation_score": 16.1
+  },
+  "scenarios": {
+    "total_test_methods": 72,
+    "quality_metrics": {
+      "has_setup_teardown": true,
+      "uses_assertions": 78,
+      "tests_with_multiple_assertions": 3,
+      "uses_context_managers": 31,
+      "has_edge_case_testing": false,
+      "has_error_testing": 31,
+      "average_test_length": 4.611111111111111
+    },
+    "tested_methods": {
+      "methods_tested": [
+        "__init__",
+        "add_item",
+        "remove_item",
+        "get_subtotal",
+        "apply_discount",
+        "calculate_shipping",
+        "calculate_tax",
+        "calculate_total",
+        "total_items",
+        "list_items",
+        "is_empty",
+        "clear_order"
+      ],
+      "methods_tested_count": 12,
+      "total_methods": 12,
+      "method_coverage_rate": 100.0,
+      "method_call_counts": {
+        "__init__": 26,
+        "add_item": 38,
+        "remove_item": 5,
+        "get_subtotal": 4,
+        "apply_discount": 9,
+        "calculate_shipping": 5,
+        "calculate_tax": 5,
+        "calculate_total": 7,
+        "total_items": 6,
+        "list_items": 4,
+        "is_empty": 7,
+        "clear_order": 3
+      }
+    },
+    "duplicates": {
+      "total_tests_analyzed": 72,
+      "duplicate_pairs_found": 0,
+      "unique_duplicate_tests": 0,
+      "duplicates": []
+    },
+    "assertion_quality": {
+      "total_assertions": 47,
+      "weak_assertions_count": 7,
+      "strong_assertions_count": 40,
+      "weak_assertions": [
+        {
+          "test": "test_remove_existing_item",
+          "line": 133,
+          "type": "assertTrue"
+        },
+        {
+          "test": "test_clear_order_removes_all_items",
+          "line": 324,
+          "type": "assertTrue"
+        },
+        {
+          "test": "test_clear_order_empty_order",
+          "line": 328,
+          "type": "assertTrue"
+        },
+        {
+          "test": "test_is_empty_true",
+          "line": 356,
+          "type": "assertTrue"
+        },
+        {
+          "test": "test_is_empty_false",
+          "line": 360,
+          "type": "assertFalse"
+        }
+      ],
+      "assertions_without_message": 78,
+      "assertion_quality_score": 85.1
+    },
+    "exception_quality": {
+      "exception_tests_count": 31,
+      "tests_with_message_check": 0,
+      "generic_exception_usage": 0,
+      "exception_tests": [
+        {
+          "test": "test_init_tax_rate_negative_raises_value_error",
+          "line": 27,
+          "exception_type": "ValueError"
+        },
+        {
+          "test": "test_init_tax_rate_above_one_raises_value_error",
+          "line": 31,
+          "exception_type": "ValueError"
+        },
+        {
+          "test": "test_init_free_shipping_threshold_negative_raises_value_error",
+          "line": 39,
+          "exception_type": "ValueError"
+        },
+        {
+          "test": "test_init_shipping_cost_negative_raises_value_error",
+          "line": 47,
+          "exception_type": "ValueError"
+        },
+        {
+          "test": "test_init_tax_rate_string_raises_type_error",
+          "line": 51,
+          "exception_type": "TypeError"
+        },
+        {
+          "test": "test_init_free_shipping_threshold_string_raises_type_error",
+          "line": 55,
+          "exception_type": "TypeError"
+        },
+        {
+          "test": "test_init_shipping_cost_string_raises_type_error",
+          "line": 59,
+          "exception_type": "TypeError"
+        },
+        {
+          "test": "test_init_tax_rate_none_raises_type_error",
+          "line": 63,
+          "exception_type": "TypeError"
+        },
+        {
+          "test": "test_add_item_empty_name_raises_value_error",
+          "line": 85,
+          "exception_type": "ValueError"
+        },
+        {
+          "test": "test_add_item_zero_price_raises_value_error",
+          "line": 89,
+          "exception_type": "ValueError"
+        }
+      ],
+      "exception_quality_score": 0.0
+    },
+    "independence": {
+      "tests_modifying_self_count": 0,
+      "tests_with_class_variables_count": 0,
+      "tests_modifying_self": [],
+      "independence_score": 100,
+      "is_independent": true
+    },
+    "naming_quality": {
+      "total_tests": 72,
+      "average_name_length": 39.2,
+      "short_names_count": 0,
+      "descriptive_names_count": 50,
+      "naming_patterns": {
+        "should": 0,
+        "when": 0,
+        "given": 0,
+        "test_": 72,
+        "with": 2,
+        "returns": 0,
+        "raises": 31
+      },
+      "naming_quality_score": 69.4,
+      "short_names": []
+    },
+    "code_smells": {
+      "smells": {
+        "tests_without_assertions": [],
+        "very_long_tests": [],
+        "tests_with_try_except": [],
+        "tests_with_sleep": [],
+        "magic_numbers": [
+          {
+            "test": "test_add_same_item_increases_quantity",
+            "count": 4,
+            "numbers": [
+              1.5,
+              2,
+              3,
+              5
+            ]
+          },
+          {
+            "test": "test_get_subtotal_multiple_items",
+            "count": 4,
+            "numbers": [
+              1.5,
+              2,
+              3,
+              9.0
+            ]
+          },
+          {
+            "test": "test_calculate_total_no_discount_below_threshold",
+            "count": 4,
+            "numbers": [
+              73.8,
+              10.0,
+              2,
+              5
+            ]
+          },
+          {
+            "test": "test_calculate_total_no_discount_above_threshold",
+            "count": 4,
+            "numbers": [
+              184.5,
+              2,
+              50.0,
+              3
+            ]
+          },
+          {
+            "test": "test_calculate_total_with_discount",
+            "count": 4,
+            "numbers": [
+              50.0,
+              2,
+              4,
+              221.4
+            ]
+          },
+          {
+            "test": "test_total_items_multiple_items",
+            "count": 4,
+            "numbers": [
+              1.5,
+              2,
+              3,
+              5
+            ]
+          }
+        ],
+        "commented_code_lines": 0
+      },
+      "smell_score": 100,
+      "total_smells_found": 0
+    }
+  },
+  "summary": {
+    "model": "claude-code-opus-4.5",
+    "strategy": "simple_prompting",
+    "context_type": "interface_docstring",
+    "timestamp": "2025-12-30T21:36:58.188152",
+    "response_time": 70.03020739555359,
+    "compilation_success_rate": 100,
+    "execution_success_rate": 0,
+    "tests_generated": 72,
+    "tests_passed": 71,
+    "tests_failed": 1,
+    "test_success_rate": 98.6,
+    "statement_coverage": 99,
+    "branch_coverage": 98,
+    "missing_statements": 1,
+    "total_statements": 93,
+    "mutation_score": 16.1,
+    "mutants_killed": 35,
+    "mutants_survived": 121,
+    "total_mutants": 217,
+    "total_test_methods": 72,
+    "total_assertions": 78,
+    "tests_with_error_handling": 31,
+    "average_test_length": 4.6,
+    "has_setup_teardown": true,
+    "tests_with_multiple_assertions": 3,
+    "methods_tested_count": 12,
+    "total_methods": 12,
+    "method_coverage_rate": 100.0,
+    "duplicate_tests_found": 0,
+    "avg_assertions_per_test": 1.08,
+    "assertion_quality_score": 85.1,
+    "weak_assertions_count": 7,
+    "strong_assertions_count": 40,
+    "exception_quality_score": 0.0,
+    "exception_tests_count": 31,
+    "tests_with_message_check": 0,
+    "independence_score": 100,
+    "is_independent": true,
+    "naming_quality_score": 69.4,
+    "average_name_length": 39.2,
+    "smell_score": 100,
+    "total_smells_found": 0,
+    "overall_quality_score": 76.7
+  }
+}

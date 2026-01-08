@@ -1,0 +1,23 @@
+Category,Name,Count,Details
+Tested Method,__init__,26,Called 26 times in tests
+Tested Method,add_item,71,Called 71 times in tests
+Tested Method,remove_item,7,Called 7 times in tests
+Tested Method,get_subtotal,6,Called 6 times in tests
+Tested Method,apply_discount,10,Called 10 times in tests
+Tested Method,calculate_shipping,5,Called 5 times in tests
+Tested Method,calculate_tax,5,Called 5 times in tests
+Tested Method,calculate_total,14,Called 14 times in tests
+Tested Method,total_items,5,Called 5 times in tests
+Tested Method,list_items,4,Called 4 times in tests
+Tested Method,is_empty,5,Called 5 times in tests
+Tested Method,clear_order,5,Called 5 times in tests
+Potential Duplicate,test_init_with_default_parameters <-> test_init_with_integer_parameters,93.3,"Similarity: 93.3% (lines 6, 35)"
+Potential Duplicate,test_init_with_minimum_tax_rate <-> test_init_with_maximum_tax_rate,100.0,"Similarity: 100.0% (lines 19, 23)"
+Potential Duplicate,test_init_with_minimum_tax_rate <-> test_init_with_zero_free_shipping_threshold,100.0,"Similarity: 100.0% (lines 19, 27)"
+Potential Duplicate,test_init_with_minimum_tax_rate <-> test_init_with_zero_shipping_cost,100.0,"Similarity: 100.0% (lines 19, 31)"
+Potential Duplicate,test_init_with_maximum_tax_rate <-> test_init_with_zero_free_shipping_threshold,100.0,"Similarity: 100.0% (lines 23, 27)"
+Potential Duplicate,test_init_with_maximum_tax_rate <-> test_init_with_zero_shipping_cost,100.0,"Similarity: 100.0% (lines 23, 31)"
+Potential Duplicate,test_init_with_zero_free_shipping_threshold <-> test_init_with_zero_shipping_cost,100.0,"Similarity: 100.0% (lines 27, 31)"
+Potential Duplicate,test_add_single_item_with_default_quantity <-> test_add_item_with_custom_quantity,82.5,"Similarity: 82.5% (lines 74, 81)"
+Potential Duplicate,test_add_single_item_with_default_quantity <-> test_add_duplicate_item_increases_quantity,82.2,"Similarity: 82.2% (lines 74, 86)"
+Potential Duplicate,test_add_single_item_with_default_quantity <-> test_add_multiple_different_items,84.4,"Similarity: 84.4% (lines 74, 92)"

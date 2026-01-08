@@ -1,0 +1,9 @@
+{
+  "total_mutants": 217,
+  "killed": 33,
+  "survived": 101,
+  "timeout": 0,
+  "suspicious": 0,
+  "skipped": 0,
+  "mutation_score": 15.2
+}

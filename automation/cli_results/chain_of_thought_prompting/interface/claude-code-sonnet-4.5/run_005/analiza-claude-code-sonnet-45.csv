@@ -1,0 +1,23 @@
+Category,Name,Count,Details
+Tested Method,__init__,96,Called 96 times in tests
+Tested Method,add_item,81,Called 81 times in tests
+Tested Method,remove_item,15,Called 15 times in tests
+Tested Method,get_subtotal,20,Called 20 times in tests
+Tested Method,apply_discount,10,Called 10 times in tests
+Tested Method,calculate_shipping,12,Called 12 times in tests
+Tested Method,calculate_tax,10,Called 10 times in tests
+Tested Method,calculate_total,15,Called 15 times in tests
+Tested Method,total_items,9,Called 9 times in tests
+Tested Method,list_items,10,Called 10 times in tests
+Tested Method,is_empty,11,Called 11 times in tests
+Tested Method,clear_order,8,Called 8 times in tests
+Potential Duplicate,test_custom_initialization <-> test_edge_case_initialization_zero_values,84.0,"Similarity: 84.0% (lines 12, 18)"
+Potential Duplicate,test_add_item_with_fractional_price <-> test_add_item_with_very_large_price,84.0,"Similarity: 84.0% (lines 68, 73)"
+Potential Duplicate,test_add_item_with_fractional_price <-> test_get_subtotal_with_fractional_prices,85.7,"Similarity: 85.7% (lines 68, 195)"
+Potential Duplicate,test_add_item_with_very_large_price <-> test_get_subtotal_with_fractional_prices,82.5,"Similarity: 82.5% (lines 73, 195)"
+Potential Duplicate,test_add_item_with_very_large_quantity <-> test_very_large_order,100.0,"Similarity: 100.0% (lines 78, 543)"
+Potential Duplicate,test_invalid_add_item_empty_name <-> test_invalid_add_item_none_name,100.0,"Similarity: 100.0% (lines 84, 89)"
+Potential Duplicate,test_invalid_add_item_empty_name <-> test_invalid_add_item_negative_price,90.0,"Similarity: 90.0% (lines 84, 94)"
+Potential Duplicate,test_invalid_add_item_empty_name <-> test_invalid_add_item_negative_quantity,86.7,"Similarity: 86.7% (lines 84, 104)"
+Potential Duplicate,test_invalid_add_item_empty_name <-> test_invalid_add_item_zero_quantity,90.0,"Similarity: 90.0% (lines 84, 109)"
+Potential Duplicate,test_invalid_add_item_empty_name <-> test_invalid_add_item_none_quantity,90.0,"Similarity: 90.0% (lines 84, 114)"

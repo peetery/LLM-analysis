@@ -1,0 +1,23 @@
+Category,Name,Count,Details
+Tested Method,__init__,133,Called 133 times in tests
+Tested Method,add_item,107,Called 107 times in tests
+Tested Method,remove_item,18,Called 18 times in tests
+Tested Method,get_subtotal,11,Called 11 times in tests
+Tested Method,apply_discount,14,Called 14 times in tests
+Tested Method,calculate_shipping,11,Called 11 times in tests
+Tested Method,calculate_tax,8,Called 8 times in tests
+Tested Method,calculate_total,25,Called 25 times in tests
+Tested Method,total_items,16,Called 16 times in tests
+Tested Method,list_items,9,Called 9 times in tests
+Tested Method,is_empty,14,Called 14 times in tests
+Tested Method,clear_order,6,Called 6 times in tests
+Potential Duplicate,test_zero_tax_rate <-> test_maximum_tax_rate,100.0,"Similarity: 100.0% (lines 18, 22)"
+Potential Duplicate,test_zero_tax_rate <-> test_zero_shipping_threshold,100.0,"Similarity: 100.0% (lines 18, 26)"
+Potential Duplicate,test_zero_tax_rate <-> test_zero_shipping_cost,100.0,"Similarity: 100.0% (lines 18, 30)"
+Potential Duplicate,test_maximum_tax_rate <-> test_zero_shipping_threshold,100.0,"Similarity: 100.0% (lines 22, 26)"
+Potential Duplicate,test_maximum_tax_rate <-> test_zero_shipping_cost,100.0,"Similarity: 100.0% (lines 22, 30)"
+Potential Duplicate,test_zero_shipping_threshold <-> test_zero_shipping_cost,100.0,"Similarity: 100.0% (lines 26, 30)"
+Potential Duplicate,test_empty_items_list <-> test_clear_already_empty_order,83.3,"Similarity: 83.3% (lines 34, 577)"
+Potential Duplicate,test_empty_items_list <-> test_is_empty_new_order,100.0,"Similarity: 100.0% (lines 34, 642)"
+Potential Duplicate,test_add_single_item_default_quantity <-> test_add_multiple_different_items,85.7,"Similarity: 85.7% (lines 76, 86)"
+Potential Duplicate,test_add_single_item_default_quantity <-> test_add_duplicate_item_same_name_and_price,88.0,"Similarity: 88.0% (lines 76, 93)"

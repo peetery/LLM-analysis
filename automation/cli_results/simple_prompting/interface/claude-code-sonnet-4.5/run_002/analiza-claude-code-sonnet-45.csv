@@ -1,0 +1,23 @@
+Category,Name,Count,Details
+Tested Method,__init__,6,Called 6 times in tests
+Tested Method,add_item,43,Called 43 times in tests
+Tested Method,remove_item,6,Called 6 times in tests
+Tested Method,get_subtotal,11,Called 11 times in tests
+Tested Method,apply_discount,6,Called 6 times in tests
+Tested Method,calculate_shipping,7,Called 7 times in tests
+Tested Method,calculate_tax,3,Called 3 times in tests
+Tested Method,calculate_total,14,Called 14 times in tests
+Tested Method,total_items,5,Called 5 times in tests
+Tested Method,list_items,4,Called 4 times in tests
+Tested Method,is_empty,4,Called 4 times in tests
+Tested Method,clear_order,4,Called 4 times in tests
+Potential Duplicate,test_init_default_values <-> test_calculate_total_empty_order,100.0,"Similarity: 100.0% (lines 9, 157)"
+Potential Duplicate,test_init_custom_tax_rate <-> test_init_custom_shipping_cost,82.9,"Similarity: 82.9% (lines 13, 19)"
+Potential Duplicate,test_init_custom_tax_rate <-> test_init_custom_free_shipping_threshold,82.9,"Similarity: 82.9% (lines 13, 25)"
+Potential Duplicate,test_init_custom_tax_rate <-> test_calculate_total_no_discount_below_threshold,83.3,"Similarity: 83.3% (lines 13, 161)"
+Potential Duplicate,test_init_custom_tax_rate <-> test_calculate_total_no_discount_above_threshold,83.3,"Similarity: 83.3% (lines 13, 166)"
+Potential Duplicate,test_init_custom_tax_rate <-> test_calculate_total_with_discount,92.0,"Similarity: 92.0% (lines 13, 171)"
+Potential Duplicate,test_init_custom_tax_rate <-> test_calculate_total_discount_affects_shipping,82.9,"Similarity: 82.9% (lines 13, 176)"
+Potential Duplicate,test_init_custom_shipping_cost <-> test_init_custom_free_shipping_threshold,86.7,"Similarity: 86.7% (lines 19, 25)"
+Potential Duplicate,test_init_custom_shipping_cost <-> test_calculate_total_no_discount_below_threshold,88.0,"Similarity: 88.0% (lines 19, 161)"
+Potential Duplicate,test_init_custom_shipping_cost <-> test_calculate_total_no_discount_above_threshold,83.3,"Similarity: 83.3% (lines 19, 166)"

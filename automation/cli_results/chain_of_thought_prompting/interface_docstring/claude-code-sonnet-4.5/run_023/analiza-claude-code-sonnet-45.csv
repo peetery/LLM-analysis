@@ -1,0 +1,23 @@
+Category,Name,Count,Details
+Tested Method,__init__,108,Called 108 times in tests
+Tested Method,add_item,89,Called 89 times in tests
+Tested Method,remove_item,12,Called 12 times in tests
+Tested Method,get_subtotal,11,Called 11 times in tests
+Tested Method,apply_discount,11,Called 11 times in tests
+Tested Method,calculate_shipping,8,Called 8 times in tests
+Tested Method,calculate_tax,8,Called 8 times in tests
+Tested Method,calculate_total,16,Called 16 times in tests
+Tested Method,total_items,15,Called 15 times in tests
+Tested Method,list_items,9,Called 9 times in tests
+Tested Method,is_empty,9,Called 9 times in tests
+Tested Method,clear_order,4,Called 4 times in tests
+Potential Duplicate,test_tax_rate_at_zero_boundary <-> test_tax_rate_at_one_boundary,100.0,"Similarity: 100.0% (lines 19, 23)"
+Potential Duplicate,test_add_single_item_with_default_quantity <-> test_add_single_item_with_custom_quantity,93.3,"Similarity: 93.3% (lines 55, 60)"
+Potential Duplicate,test_add_single_item_with_default_quantity <-> test_add_multiple_different_items,85.0,"Similarity: 85.0% (lines 55, 65)"
+Potential Duplicate,test_add_single_item_with_default_quantity <-> test_add_duplicate_item_same_name_and_price,90.0,"Similarity: 90.0% (lines 55, 72)"
+Potential Duplicate,test_add_single_item_with_default_quantity <-> test_add_item_edge_very_long_name,85.0,"Similarity: 85.0% (lines 55, 136)"
+Potential Duplicate,test_add_single_item_with_default_quantity <-> test_add_item_edge_very_large_quantity,93.3,"Similarity: 93.3% (lines 55, 142)"
+Potential Duplicate,test_add_single_item_with_default_quantity <-> test_total_items_single_item,100.0,"Similarity: 100.0% (lines 55, 468)"
+Potential Duplicate,test_add_single_item_with_default_quantity <-> test_total_items_single_item_multiple_quantity,100.0,"Similarity: 100.0% (lines 55, 473)"
+Potential Duplicate,test_add_single_item_with_default_quantity <-> test_total_items_multiple_items,88.0,"Similarity: 88.0% (lines 55, 478)"
+Potential Duplicate,test_add_single_item_with_default_quantity <-> test_total_items_after_adding_duplicate,90.0,"Similarity: 90.0% (lines 55, 484)"

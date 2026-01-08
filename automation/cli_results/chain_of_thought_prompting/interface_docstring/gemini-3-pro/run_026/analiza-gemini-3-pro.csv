@@ -1,0 +1,23 @@
+Category,Name,Count,Details
+Tested Method,__init__,45,Called 45 times in tests
+Tested Method,add_item,23,Called 23 times in tests
+Tested Method,remove_item,3,Called 3 times in tests
+Tested Method,get_subtotal,3,Called 3 times in tests
+Tested Method,apply_discount,7,Called 7 times in tests
+Tested Method,calculate_shipping,6,Called 6 times in tests
+Tested Method,calculate_tax,6,Called 6 times in tests
+Tested Method,calculate_total,5,Called 5 times in tests
+Tested Method,total_items,4,Called 4 times in tests
+Tested Method,list_items,2,Called 2 times in tests
+Tested Method,is_empty,5,Called 5 times in tests
+Tested Method,clear_order,1,Called 1 times in tests
+Potential Duplicate,test_add_item_empty_name <-> test_add_item_invalid_quantity,90.0,"Similarity: 90.0% (lines 50, 65)"
+Potential Duplicate,test_add_item_invalid_quantity <-> test_add_item_type_error,86.7,"Similarity: 86.7% (lines 65, 76)"
+Potential Duplicate,test_apply_discount_valid <-> test_apply_discount_zero,86.7,"Similarity: 86.7% (lines 108, 113)"
+Potential Duplicate,test_apply_discount_valid <-> test_apply_discount_full,86.7,"Similarity: 86.7% (lines 108, 118)"
+Potential Duplicate,test_apply_discount_zero <-> test_apply_discount_full,100.0,"Similarity: 100.0% (lines 113, 118)"
+Potential Duplicate,test_apply_discount_rate_out_of_range <-> test_apply_discount_type_error,85.0,"Similarity: 85.0% (lines 128, 135)"
+Potential Duplicate,test_shipping_below_threshold <-> test_shipping_above_threshold,90.0,"Similarity: 90.0% (lines 140, 145)"
+Potential Duplicate,test_shipping_below_threshold <-> test_shipping_exact_threshold,93.3,"Similarity: 93.3% (lines 140, 150)"
+Potential Duplicate,test_shipping_above_threshold <-> test_shipping_exact_threshold,93.3,"Similarity: 93.3% (lines 145, 150)"
+Potential Duplicate,test_total_standard_flow <-> test_total_free_shipping_flow,90.0,"Similarity: 90.0% (lines 180, 186)"

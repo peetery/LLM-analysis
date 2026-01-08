@@ -1,0 +1,23 @@
+Category,Name,Count,Details
+Tested Method,__init__,106,Called 106 times in tests
+Tested Method,add_item,78,Called 78 times in tests
+Tested Method,remove_item,10,Called 10 times in tests
+Tested Method,get_subtotal,11,Called 11 times in tests
+Tested Method,apply_discount,10,Called 10 times in tests
+Tested Method,calculate_shipping,6,Called 6 times in tests
+Tested Method,calculate_tax,7,Called 7 times in tests
+Tested Method,calculate_total,18,Called 18 times in tests
+Tested Method,total_items,6,Called 6 times in tests
+Tested Method,list_items,4,Called 4 times in tests
+Tested Method,is_empty,5,Called 5 times in tests
+Tested Method,clear_order,5,Called 5 times in tests
+Potential Duplicate,test_init_tax_rate_lower_boundary <-> test_init_tax_rate_upper_boundary,100.0,"Similarity: 100.0% (lines 18, 22)"
+Potential Duplicate,test_init_tax_rate_lower_boundary <-> test_init_zero_free_shipping_threshold,100.0,"Similarity: 100.0% (lines 18, 38)"
+Potential Duplicate,test_init_tax_rate_lower_boundary <-> test_init_zero_shipping_cost,100.0,"Similarity: 100.0% (lines 18, 46)"
+Potential Duplicate,test_init_tax_rate_upper_boundary <-> test_init_zero_free_shipping_threshold,100.0,"Similarity: 100.0% (lines 22, 38)"
+Potential Duplicate,test_init_tax_rate_upper_boundary <-> test_init_zero_shipping_cost,100.0,"Similarity: 100.0% (lines 22, 46)"
+Potential Duplicate,test_init_zero_free_shipping_threshold <-> test_init_zero_shipping_cost,100.0,"Similarity: 100.0% (lines 38, 46)"
+Potential Duplicate,test_add_item_single_with_default_quantity <-> test_add_item_single_with_explicit_quantity,95.0,"Similarity: 95.0% (lines 66, 72)"
+Potential Duplicate,test_add_item_single_with_default_quantity <-> test_add_item_multiple_different_items,85.7,"Similarity: 85.7% (lines 66, 77)"
+Potential Duplicate,test_add_item_single_with_default_quantity <-> test_add_item_same_item_twice_increases_quantity,90.0,"Similarity: 90.0% (lines 66, 83)"
+Potential Duplicate,test_add_item_single_with_default_quantity <-> test_add_item_large_quantity,84.0,"Similarity: 84.0% (lines 66, 95)"

@@ -1,0 +1,23 @@
+Category,Name,Count,Details
+Tested Method,__init__,125,Called 125 times in tests
+Tested Method,add_item,105,Called 105 times in tests
+Tested Method,remove_item,14,Called 14 times in tests
+Tested Method,get_subtotal,15,Called 15 times in tests
+Tested Method,apply_discount,12,Called 12 times in tests
+Tested Method,calculate_shipping,8,Called 8 times in tests
+Tested Method,calculate_tax,8,Called 8 times in tests
+Tested Method,calculate_total,23,Called 23 times in tests
+Tested Method,total_items,16,Called 16 times in tests
+Tested Method,list_items,11,Called 11 times in tests
+Tested Method,is_empty,12,Called 12 times in tests
+Tested Method,clear_order,8,Called 8 times in tests
+Potential Duplicate,test_init_with_tax_rate_zero <-> test_init_with_tax_rate_one,100.0,"Similarity: 100.0% (lines 18, 22)"
+Potential Duplicate,test_init_with_tax_rate_zero <-> test_init_with_free_shipping_threshold_zero,100.0,"Similarity: 100.0% (lines 18, 34)"
+Potential Duplicate,test_init_with_tax_rate_zero <-> test_init_with_shipping_cost_zero,100.0,"Similarity: 100.0% (lines 18, 42)"
+Potential Duplicate,test_init_with_tax_rate_one <-> test_init_with_free_shipping_threshold_zero,100.0,"Similarity: 100.0% (lines 22, 34)"
+Potential Duplicate,test_init_with_tax_rate_one <-> test_init_with_shipping_cost_zero,100.0,"Similarity: 100.0% (lines 22, 42)"
+Potential Duplicate,test_init_with_free_shipping_threshold_zero <-> test_init_with_shipping_cost_zero,100.0,"Similarity: 100.0% (lines 34, 42)"
+Potential Duplicate,test_add_item_with_default_quantity <-> test_add_item_with_custom_quantity,93.3,"Similarity: 93.3% (lines 62, 67)"
+Potential Duplicate,test_add_item_with_default_quantity <-> test_add_item_with_quantity_one_explicitly,100.0,"Similarity: 100.0% (lines 62, 86)"
+Potential Duplicate,test_add_item_with_default_quantity <-> test_add_item_with_very_large_quantity,93.3,"Similarity: 93.3% (lines 62, 142)"
+Potential Duplicate,test_add_item_with_default_quantity <-> test_total_items_single_item_quantity_one,100.0,"Similarity: 100.0% (lines 62, 534)"

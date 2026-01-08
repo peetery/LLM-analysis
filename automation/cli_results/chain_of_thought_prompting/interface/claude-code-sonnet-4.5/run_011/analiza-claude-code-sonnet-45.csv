@@ -1,0 +1,23 @@
+Category,Name,Count,Details
+Tested Method,__init__,81,Called 81 times in tests
+Tested Method,add_item,72,Called 72 times in tests
+Tested Method,remove_item,11,Called 11 times in tests
+Tested Method,get_subtotal,15,Called 15 times in tests
+Tested Method,apply_discount,7,Called 7 times in tests
+Tested Method,calculate_shipping,9,Called 9 times in tests
+Tested Method,calculate_tax,8,Called 8 times in tests
+Tested Method,calculate_total,16,Called 16 times in tests
+Tested Method,total_items,10,Called 10 times in tests
+Tested Method,list_items,9,Called 9 times in tests
+Tested Method,is_empty,10,Called 10 times in tests
+Tested Method,clear_order,4,Called 4 times in tests
+Potential Duplicate,test_default_initialization <-> test_custom_initialization,86.7,"Similarity: 86.7% (lines 6, 12)"
+Potential Duplicate,test_zero_tax_rate_initialization <-> test_tax_with_default_rate,90.0,"Similarity: 90.0% (lines 18, 217)"
+Potential Duplicate,test_zero_tax_rate_initialization <-> test_tax_with_custom_rate,86.7,"Similarity: 86.7% (lines 18, 222)"
+Potential Duplicate,test_zero_tax_rate_initialization <-> test_tax_with_zero_rate,100.0,"Similarity: 100.0% (lines 18, 227)"
+Potential Duplicate,test_add_single_item_with_default_quantity <-> test_add_single_item_with_custom_quantity,90.0,"Similarity: 90.0% (lines 27, 33)"
+Potential Duplicate,test_add_single_item_with_default_quantity <-> test_add_multiple_different_items,84.4,"Similarity: 84.4% (lines 27, 39)"
+Potential Duplicate,test_add_single_item_with_default_quantity <-> test_add_item_with_very_large_quantity,90.0,"Similarity: 90.0% (lines 27, 79)"
+Potential Duplicate,test_add_single_item_with_default_quantity <-> test_subtotal_with_single_item,87.5,"Similarity: 87.5% (lines 27, 124)"
+Potential Duplicate,test_add_single_item_with_default_quantity <-> test_total_items_with_single_item_quantity_1,87.5,"Similarity: 87.5% (lines 27, 317)"
+Potential Duplicate,test_add_single_item_with_default_quantity <-> test_total_items_with_single_item_quantity_greater_than_1,80.8,"Similarity: 80.8% (lines 27, 322)"

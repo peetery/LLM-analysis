@@ -1,0 +1,23 @@
+Category,Name,Count,Details
+Tested Method,__init__,98,Called 98 times in tests
+Tested Method,add_item,73,Called 73 times in tests
+Tested Method,remove_item,11,Called 11 times in tests
+Tested Method,get_subtotal,17,Called 17 times in tests
+Tested Method,apply_discount,11,Called 11 times in tests
+Tested Method,calculate_shipping,13,Called 13 times in tests
+Tested Method,calculate_tax,8,Called 8 times in tests
+Tested Method,calculate_total,12,Called 12 times in tests
+Tested Method,total_items,14,Called 14 times in tests
+Tested Method,list_items,7,Called 7 times in tests
+Tested Method,is_empty,9,Called 9 times in tests
+Tested Method,clear_order,7,Called 7 times in tests
+Potential Duplicate,test_init_zero_tax_rate <-> test_init_zero_free_shipping_threshold,100.0,"Similarity: 100.0% (lines 18, 22)"
+Potential Duplicate,test_init_zero_tax_rate <-> test_init_zero_shipping_cost,100.0,"Similarity: 100.0% (lines 18, 26)"
+Potential Duplicate,test_init_zero_free_shipping_threshold <-> test_init_zero_shipping_cost,100.0,"Similarity: 100.0% (lines 22, 26)"
+Potential Duplicate,test_add_item_single_default_quantity <-> test_add_item_single_explicit_quantity,93.3,"Similarity: 93.3% (lines 42, 47)"
+Potential Duplicate,test_add_item_single_default_quantity <-> test_add_item_multiple_different_items,85.7,"Similarity: 85.7% (lines 42, 52)"
+Potential Duplicate,test_add_item_single_default_quantity <-> test_add_item_same_item_twice,88.0,"Similarity: 88.0% (lines 42, 58)"
+Potential Duplicate,test_add_item_single_default_quantity <-> test_add_item_quantity_one_explicit,100.0,"Similarity: 100.0% (lines 42, 64)"
+Potential Duplicate,test_add_item_single_default_quantity <-> test_total_items_single_item_quantity_one,100.0,"Similarity: 100.0% (lines 42, 407)"
+Potential Duplicate,test_add_item_single_default_quantity <-> test_total_items_multiple_items,88.0,"Similarity: 88.0% (lines 42, 412)"
+Potential Duplicate,test_add_item_single_default_quantity <-> test_total_items_varying_quantities,85.7,"Similarity: 85.7% (lines 42, 418)"

@@ -1,0 +1,131 @@
+{
+  "compilation": {
+    "compilation_success": false,
+    "execution_success": false,
+    "tests_run": 0,
+    "tests_passed": 0,
+    "tests_failed": 0,
+    "test_errors": [],
+    "compilation_errors": [
+      "  File \"tests.py\", line 75\n    def test_add_item_invalid\n                             ^\nSyntaxError: expected '('\n"
+    ]
+  },
+  "coverage": null,
+  "mutation": {
+    "total_mutants": 0,
+    "killed": 0,
+    "survived": 0,
+    "timeout": 0,
+    "suspicious": 0,
+    "skipped": 0,
+    "mutation_score": 0.0
+  },
+  "scenarios": {
+    "total_test_methods": 13,
+    "quality_metrics": {
+      "has_setup_teardown": false,
+      "uses_assertions": 24,
+      "tests_with_multiple_assertions": 6,
+      "uses_context_managers": 8,
+      "has_edge_case_testing": false,
+      "has_error_testing": 8,
+      "average_test_length": 5.461538461538462
+    },
+    "tested_methods": {
+      "methods_tested": [
+        "__init__",
+        "add_item"
+      ],
+      "methods_tested_count": 2,
+      "total_methods": 12,
+      "method_coverage_rate": 16.7,
+      "method_call_counts": {
+        "__init__": 15,
+        "add_item": 8
+      }
+    },
+    "duplicates": {
+      "total_tests_analyzed": 0,
+      "duplicate_pairs_found": 0,
+      "duplicates": [],
+      "error": "expected '(' (<unknown>, line 75)"
+    },
+    "assertion_quality": {
+      "total_assertions": 0,
+      "weak_assertions_count": 0,
+      "strong_assertions_count": 0,
+      "weak_assertions": [],
+      "assertions_without_message": 0,
+      "assertion_quality_score": 0
+    },
+    "exception_quality": {
+      "exception_tests_count": 0,
+      "tests_with_message_check": 0,
+      "generic_exception_usage": 0,
+      "exception_tests": [],
+      "exception_quality_score": 0
+    },
+    "independence": {
+      "tests_modifying_self_count": 0,
+      "tests_with_class_variables_count": 0,
+      "tests_modifying_self": [],
+      "independence_score": 100,
+      "is_independent": true
+    },
+    "naming_quality": {
+      "total_tests": 0,
+      "average_name_length": 0,
+      "short_names_count": 0,
+      "descriptive_names_count": 0,
+      "naming_patterns": {},
+      "naming_quality_score": 0,
+      "short_names": []
+    },
+    "code_smells": {
+      "smells": {},
+      "smell_score": 100,
+      "total_smells_found": 0
+    }
+  },
+  "summary": {
+    "model": "gemini-3-flash",
+    "strategy": "chain_of_thought_prompting",
+    "context_type": "full_context",
+    "timestamp": "2025-12-30T02:24:20.055986",
+    "response_time": 82.88448524475098,
+    "compilation_success_rate": 0,
+    "execution_success_rate": 0,
+    "tests_generated": 0,
+    "tests_passed": 0,
+    "tests_failed": 0,
+    "test_success_rate": 0,
+    "total_test_methods": 13,
+    "total_assertions": 24,
+    "tests_with_error_handling": 8,
+    "average_test_length": 5.5,
+    "has_setup_teardown": false,
+    "tests_with_multiple_assertions": 6,
+    "methods_tested_count": 2,
+    "total_methods": 12,
+    "method_coverage_rate": 16.7,
+    "duplicate_tests_found": 0,
+    "avg_assertions_per_test": 1.85,
+    "assertion_quality_score": 0,
+    "weak_assertions_count": 0,
+    "strong_assertions_count": 0,
+    "exception_quality_score": 0,
+    "exception_tests_count": 0,
+    "tests_with_message_check": 0,
+    "independence_score": 100,
+    "is_independent": true,
+    "naming_quality_score": 0,
+    "average_name_length": 0,
+    "smell_score": 100,
+    "total_smells_found": 0,
+    "overall_quality_score": 45.0,
+    "mutation_score": 0.0,
+    "mutants_killed": 0,
+    "mutants_survived": 0,
+    "total_mutants": 0
+  }
+}

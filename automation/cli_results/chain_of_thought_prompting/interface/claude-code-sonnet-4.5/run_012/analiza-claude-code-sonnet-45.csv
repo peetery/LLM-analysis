@@ -1,0 +1,23 @@
+Category,Name,Count,Details
+Tested Method,__init__,85,Called 85 times in tests
+Tested Method,add_item,62,Called 62 times in tests
+Tested Method,remove_item,10,Called 10 times in tests
+Tested Method,get_subtotal,9,Called 9 times in tests
+Tested Method,apply_discount,8,Called 8 times in tests
+Tested Method,calculate_shipping,7,Called 7 times in tests
+Tested Method,calculate_tax,8,Called 8 times in tests
+Tested Method,calculate_total,23,Called 23 times in tests
+Tested Method,total_items,12,Called 12 times in tests
+Tested Method,list_items,3,Called 3 times in tests
+Tested Method,is_empty,8,Called 8 times in tests
+Tested Method,clear_order,4,Called 4 times in tests
+Potential Duplicate,test_constructor_with_default_parameters <-> test_constructor_with_custom_parameters,83.3,"Similarity: 83.3% (lines 6, 10)"
+Potential Duplicate,test_constructor_with_default_parameters <-> test_constructor_with_zero_tax_rate,90.0,"Similarity: 90.0% (lines 6, 14)"
+Potential Duplicate,test_constructor_with_default_parameters <-> test_tax_on_positive_amount,100.0,"Similarity: 100.0% (lines 6, 295)"
+Potential Duplicate,test_constructor_with_default_parameters <-> test_tax_with_zero_tax_rate,90.0,"Similarity: 90.0% (lines 6, 300)"
+Potential Duplicate,test_constructor_with_custom_parameters <-> test_constructor_with_zero_tax_rate,84.0,"Similarity: 84.0% (lines 10, 14)"
+Potential Duplicate,test_constructor_with_custom_parameters <-> test_tax_on_positive_amount,83.3,"Similarity: 83.3% (lines 10, 295)"
+Potential Duplicate,test_constructor_with_custom_parameters <-> test_tax_with_zero_tax_rate,84.0,"Similarity: 84.0% (lines 10, 300)"
+Potential Duplicate,test_constructor_with_zero_tax_rate <-> test_tax_on_positive_amount,90.0,"Similarity: 90.0% (lines 14, 295)"
+Potential Duplicate,test_constructor_with_zero_tax_rate <-> test_tax_with_zero_tax_rate,100.0,"Similarity: 100.0% (lines 14, 300)"
+Potential Duplicate,test_add_single_item_with_default_quantity <-> test_add_single_item_with_custom_quantity,90.0,"Similarity: 90.0% (lines 22, 27)"

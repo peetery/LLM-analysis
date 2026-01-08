@@ -1,0 +1,220 @@
+{
+  "compilation": {
+    "compilation_success": true,
+    "execution_success": true,
+    "tests_run": 23,
+    "tests_passed": 23,
+    "tests_failed": 0,
+    "test_errors": [],
+    "compilation_errors": []
+  },
+  "coverage": {
+    "statements": 93,
+    "missing": 33,
+    "coverage_percent": 64,
+    "branch_coverage_percent": 98,
+    "partial_coverage": 0
+  },
+  "mutation": {
+    "total_mutants": 217,
+    "killed": 29,
+    "survived": 74,
+    "timeout": 0,
+    "suspicious": 0,
+    "skipped": 0,
+    "mutation_score": 13.4
+  },
+  "scenarios": {
+    "total_test_methods": 23,
+    "quality_metrics": {
+      "has_setup_teardown": false,
+      "uses_assertions": 33,
+      "tests_with_multiple_assertions": 5,
+      "uses_context_managers": 16,
+      "has_edge_case_testing": false,
+      "has_error_testing": 16,
+      "average_test_length": 5.217391304347826
+    },
+    "tested_methods": {
+      "methods_tested": [
+        "__init__",
+        "add_item",
+        "remove_item",
+        "get_subtotal"
+      ],
+      "methods_tested_count": 4,
+      "total_methods": 12,
+      "method_coverage_rate": 33.3,
+      "method_call_counts": {
+        "__init__": 24,
+        "add_item": 16,
+        "remove_item": 3,
+        "get_subtotal": 1
+      }
+    },
+    "duplicates": {
+      "total_tests_analyzed": 23,
+      "duplicate_pairs_found": 0,
+      "unique_duplicate_tests": 0,
+      "duplicates": []
+    },
+    "assertion_quality": {
+      "total_assertions": 17,
+      "weak_assertions_count": 0,
+      "strong_assertions_count": 17,
+      "weak_assertions": [],
+      "assertions_without_message": 33,
+      "assertion_quality_score": 100.0
+    },
+    "exception_quality": {
+      "exception_tests_count": 16,
+      "tests_with_message_check": 0,
+      "generic_exception_usage": 0,
+      "exception_tests": [
+        {
+          "test": "test_init_tax_rate_type_error",
+          "line": 20,
+          "exception_type": "TypeError"
+        },
+        {
+          "test": "test_init_threshold_type_error",
+          "line": 24,
+          "exception_type": "TypeError"
+        },
+        {
+          "test": "test_init_shipping_cost_type_error",
+          "line": 28,
+          "exception_type": "TypeError"
+        },
+        {
+          "test": "test_init_tax_rate_value_error_low",
+          "line": 32,
+          "exception_type": "ValueError"
+        },
+        {
+          "test": "test_init_tax_rate_value_error_high",
+          "line": 36,
+          "exception_type": "ValueError"
+        },
+        {
+          "test": "test_init_threshold_value_error",
+          "line": 40,
+          "exception_type": "ValueError"
+        },
+        {
+          "test": "test_init_shipping_cost_value_error",
+          "line": 44,
+          "exception_type": "ValueError"
+        },
+        {
+          "test": "test_add_item_name_type_error",
+          "line": 69,
+          "exception_type": "TypeError"
+        },
+        {
+          "test": "test_add_item_price_type_error",
+          "line": 74,
+          "exception_type": "TypeError"
+        },
+        {
+          "test": "test_add_item_quantity_type_error",
+          "line": 79,
+          "exception_type": "TypeError"
+        }
+      ],
+      "exception_quality_score": 0.0
+    },
+    "independence": {
+      "tests_modifying_self_count": 0,
+      "tests_with_class_variables_count": 0,
+      "tests_modifying_self": [],
+      "independence_score": 100,
+      "is_independent": true
+    },
+    "naming_quality": {
+      "total_tests": 23,
+      "average_name_length": 29.8,
+      "short_names_count": 0,
+      "descriptive_names_count": 14,
+      "naming_patterns": {
+        "should": 0,
+        "when": 0,
+        "given": 0,
+        "test_": 23,
+        "with": 0,
+        "returns": 0,
+        "raises": 0
+      },
+      "naming_quality_score": 60.9,
+      "short_names": []
+    },
+    "code_smells": {
+      "smells": {
+        "tests_without_assertions": [],
+        "very_long_tests": [],
+        "tests_with_try_except": [],
+        "tests_with_sleep": [],
+        "magic_numbers": [
+          {
+            "test": "test_get_subtotal_normal",
+            "count": 4,
+            "numbers": [
+              25.0,
+              10.0,
+              2,
+              5.0
+            ]
+          }
+        ],
+        "commented_code_lines": 0
+      },
+      "smell_score": 100,
+      "total_smells_found": 0
+    }
+  },
+  "summary": {
+    "model": "gemini-3-flash",
+    "strategy": "chain_of_thought_prompting",
+    "context_type": "full_context",
+    "timestamp": "2025-12-30T02:57:24.844834",
+    "response_time": 82.46859049797058,
+    "compilation_success_rate": 100,
+    "execution_success_rate": 100,
+    "tests_generated": 23,
+    "tests_passed": 23,
+    "tests_failed": 0,
+    "test_success_rate": 100.0,
+    "statement_coverage": 64,
+    "branch_coverage": 98,
+    "missing_statements": 33,
+    "total_statements": 93,
+    "mutation_score": 13.4,
+    "mutants_killed": 29,
+    "mutants_survived": 74,
+    "total_mutants": 217,
+    "total_test_methods": 23,
+    "total_assertions": 33,
+    "tests_with_error_handling": 16,
+    "average_test_length": 5.2,
+    "has_setup_teardown": false,
+    "tests_with_multiple_assertions": 5,
+    "methods_tested_count": 4,
+    "total_methods": 12,
+    "method_coverage_rate": 33.3,
+    "duplicate_tests_found": 0,
+    "avg_assertions_per_test": 1.43,
+    "assertion_quality_score": 100.0,
+    "weak_assertions_count": 0,
+    "strong_assertions_count": 17,
+    "exception_quality_score": 0.0,
+    "exception_tests_count": 16,
+    "tests_with_message_check": 0,
+    "independence_score": 100,
+    "is_independent": true,
+    "naming_quality_score": 60.9,
+    "average_name_length": 29.8,
+    "smell_score": 100,
+    "total_smells_found": 0,
+    "overall_quality_score": 79.1
+  }
+}

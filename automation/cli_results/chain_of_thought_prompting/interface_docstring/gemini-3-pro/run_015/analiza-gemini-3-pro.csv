@@ -1,0 +1,23 @@
+Category,Name,Count,Details
+Tested Method,__init__,9,Called 9 times in tests
+Tested Method,add_item,23,Called 23 times in tests
+Tested Method,remove_item,3,Called 3 times in tests
+Tested Method,get_subtotal,2,Called 2 times in tests
+Tested Method,apply_discount,6,Called 6 times in tests
+Tested Method,calculate_shipping,4,Called 4 times in tests
+Tested Method,calculate_tax,4,Called 4 times in tests
+Tested Method,calculate_total,5,Called 5 times in tests
+Tested Method,total_items,7,Called 7 times in tests
+Tested Method,list_items,2,Called 2 times in tests
+Tested Method,is_empty,7,Called 7 times in tests
+Tested Method,clear_order,1,Called 1 times in tests
+Potential Duplicate,test_add_item_existing_update_quantity <-> test_add_item_default_quantity,85.0,"Similarity: 85.0% (lines 43, 60)"
+Potential Duplicate,test_add_item_existing_update_quantity <-> test_total_items_normal,88.6,"Similarity: 88.6% (lines 43, 172)"
+Potential Duplicate,test_add_item_invalid_price_zero <-> test_add_item_invalid_quantity_negative,100.0,"Similarity: 100.0% (lines 52, 56)"
+Potential Duplicate,test_add_item_invalid_price_zero <-> test_add_item_conflict_same_name_different_price,90.0,"Similarity: 90.0% (lines 52, 64)"
+Potential Duplicate,test_add_item_invalid_quantity_negative <-> test_add_item_conflict_same_name_different_price,90.0,"Similarity: 90.0% (lines 56, 64)"
+Potential Duplicate,test_apply_discount_normal <-> test_apply_discount_zero_percent,86.7,"Similarity: 86.7% (lines 95, 99)"
+Potential Duplicate,test_apply_discount_normal <-> test_apply_discount_full_percent,86.7,"Similarity: 86.7% (lines 95, 103)"
+Potential Duplicate,test_apply_discount_zero_percent <-> test_apply_discount_full_percent,100.0,"Similarity: 100.0% (lines 99, 103)"
+Potential Duplicate,test_apply_discount_invalid_subtotal_negative <-> test_apply_discount_invalid_types,86.7,"Similarity: 86.7% (lines 107, 115)"
+Potential Duplicate,test_calculate_total_normal_with_discount <-> test_calculate_total_shipping_logic_change,82.9,"Similarity: 82.9% (lines 155, 168)"

@@ -1,0 +1,18 @@
+Category,Name,Count,Details
+Tested Method,__init__,3,Called 3 times in tests
+Tested Method,add_item,20,Called 20 times in tests
+Tested Method,remove_item,2,Called 2 times in tests
+Tested Method,get_subtotal,6,Called 6 times in tests
+Tested Method,apply_discount,3,Called 3 times in tests
+Tested Method,calculate_shipping,7,Called 7 times in tests
+Tested Method,calculate_tax,3,Called 3 times in tests
+Tested Method,calculate_total,4,Called 4 times in tests
+Tested Method,total_items,5,Called 5 times in tests
+Tested Method,list_items,1,Called 1 times in tests
+Tested Method,is_empty,4,Called 4 times in tests
+Tested Method,clear_order,2,Called 2 times in tests
+Potential Duplicate,test_init_defaults <-> test_init_custom_values,85.0,"Similarity: 85.0% (lines 9, 14)"
+Potential Duplicate,test_add_single_item <-> test_add_multiple_items,84.4,"Similarity: 84.4% (lines 20, 25)"
+Potential Duplicate,test_add_single_item <-> test_add_existing_item_accumulates_quantity,82.9,"Similarity: 82.9% (lines 20, 31)"
+Potential Duplicate,test_add_multiple_items <-> test_add_existing_item_accumulates_quantity,87.5,"Similarity: 87.5% (lines 25, 31)"
+Potential Duplicate,test_add_item_invalid_price <-> test_add_item_invalid_quantity,100.0,"Similarity: 100.0% (lines 37, 41)"

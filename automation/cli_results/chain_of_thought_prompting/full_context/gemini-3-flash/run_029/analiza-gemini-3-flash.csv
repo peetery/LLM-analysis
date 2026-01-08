@@ -1,0 +1,4 @@
+Category,Name,Count,Details
+Tested Method,__init__,28,Called 28 times in tests
+Tested Method,add_item,17,Called 17 times in tests
+Tested Method,remove_item,3,Called 3 times in tests

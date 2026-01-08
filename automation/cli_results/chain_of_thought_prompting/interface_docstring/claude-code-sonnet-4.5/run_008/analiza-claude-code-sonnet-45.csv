@@ -1,0 +1,23 @@
+Category,Name,Count,Details
+Tested Method,__init__,104,Called 104 times in tests
+Tested Method,add_item,75,Called 75 times in tests
+Tested Method,remove_item,9,Called 9 times in tests
+Tested Method,get_subtotal,6,Called 6 times in tests
+Tested Method,apply_discount,11,Called 11 times in tests
+Tested Method,calculate_shipping,6,Called 6 times in tests
+Tested Method,calculate_tax,5,Called 5 times in tests
+Tested Method,calculate_total,18,Called 18 times in tests
+Tested Method,total_items,16,Called 16 times in tests
+Tested Method,list_items,10,Called 10 times in tests
+Tested Method,is_empty,10,Called 10 times in tests
+Tested Method,clear_order,7,Called 7 times in tests
+Potential Duplicate,test_init_with_default_parameters <-> test_init_with_tax_rate_at_boundary_zero,100.0,"Similarity: 100.0% (lines 6, 22)"
+Potential Duplicate,test_init_with_default_parameters <-> test_init_with_tax_rate_at_boundary_one,100.0,"Similarity: 100.0% (lines 6, 26)"
+Potential Duplicate,test_init_with_default_parameters <-> test_init_with_zero_free_shipping_threshold,100.0,"Similarity: 100.0% (lines 6, 38)"
+Potential Duplicate,test_init_with_default_parameters <-> test_init_with_zero_shipping_cost,100.0,"Similarity: 100.0% (lines 6, 50)"
+Potential Duplicate,test_init_with_tax_rate_at_boundary_zero <-> test_init_with_tax_rate_at_boundary_one,100.0,"Similarity: 100.0% (lines 22, 26)"
+Potential Duplicate,test_init_with_tax_rate_at_boundary_zero <-> test_init_with_zero_free_shipping_threshold,100.0,"Similarity: 100.0% (lines 22, 38)"
+Potential Duplicate,test_init_with_tax_rate_at_boundary_zero <-> test_init_with_zero_shipping_cost,100.0,"Similarity: 100.0% (lines 22, 50)"
+Potential Duplicate,test_init_with_tax_rate_at_boundary_one <-> test_init_with_zero_free_shipping_threshold,100.0,"Similarity: 100.0% (lines 26, 38)"
+Potential Duplicate,test_init_with_tax_rate_at_boundary_one <-> test_init_with_zero_shipping_cost,100.0,"Similarity: 100.0% (lines 26, 50)"
+Potential Duplicate,test_init_with_invalid_tax_rate_type_raises_type_error <-> test_init_with_invalid_free_shipping_threshold_type_raises_type_error,100.0,"Similarity: 100.0% (lines 30, 42)"

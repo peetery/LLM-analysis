@@ -1,0 +1,23 @@
+Category,Name,Count,Details
+Tested Method,__init__,99,Called 99 times in tests
+Tested Method,add_item,74,Called 74 times in tests
+Tested Method,remove_item,14,Called 14 times in tests
+Tested Method,get_subtotal,16,Called 16 times in tests
+Tested Method,apply_discount,8,Called 8 times in tests
+Tested Method,calculate_shipping,9,Called 9 times in tests
+Tested Method,calculate_tax,7,Called 7 times in tests
+Tested Method,calculate_total,14,Called 14 times in tests
+Tested Method,total_items,17,Called 17 times in tests
+Tested Method,list_items,9,Called 9 times in tests
+Tested Method,is_empty,8,Called 8 times in tests
+Tested Method,clear_order,5,Called 5 times in tests
+Potential Duplicate,test_init_zero_tax_rate <-> test_init_zero_free_shipping_threshold,100.0,"Similarity: 100.0% (lines 30, 34)"
+Potential Duplicate,test_init_zero_tax_rate <-> test_init_zero_shipping_cost,100.0,"Similarity: 100.0% (lines 30, 38)"
+Potential Duplicate,test_init_zero_free_shipping_threshold <-> test_init_zero_shipping_cost,100.0,"Similarity: 100.0% (lines 34, 38)"
+Potential Duplicate,test_add_item_single_default_quantity <-> test_add_item_single_explicit_quantity,93.3,"Similarity: 93.3% (lines 54, 59)"
+Potential Duplicate,test_add_item_single_default_quantity <-> test_add_item_quantity_one_explicit,100.0,"Similarity: 100.0% (lines 54, 81)"
+Potential Duplicate,test_add_item_single_default_quantity <-> test_add_item_duplicate_name,88.0,"Similarity: 88.0% (lines 54, 91)"
+Potential Duplicate,test_add_item_single_default_quantity <-> test_remove_item_from_single_item_order,87.5,"Similarity: 87.5% (lines 54, 156)"
+Potential Duplicate,test_add_item_single_default_quantity <-> test_total_items_single_quantity_one,100.0,"Similarity: 100.0% (lines 54, 421)"
+Potential Duplicate,test_add_item_single_default_quantity <-> test_total_items_single_quantity_greater_than_one,93.3,"Similarity: 93.3% (lines 54, 426)"
+Potential Duplicate,test_add_item_single_default_quantity <-> test_total_items_multiple_items,86.7,"Similarity: 86.7% (lines 54, 431)"
