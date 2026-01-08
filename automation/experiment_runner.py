@@ -1,3 +1,15 @@
+"""
+Experiment Runner for LLM Test Generation Analysis.
+
+This module provides the analysis pipeline for evaluating LLM-generated unit tests.
+It handles test extraction, compilation, coverage analysis, mutation testing,
+and quality metrics calculation.
+
+Supports two modes:
+    - Legacy mode: Hardcoded for OrderCalculator class
+    - Universal mode: Uses ClassContextExtractor for any Python class
+"""
+
 import json
 import subprocess
 import logging
@@ -7,15 +19,66 @@ import difflib
 from pathlib import Path
 from datetime import datetime
 import shutil
+from typing import Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from class_context_extractor import ClassContextExtractor
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-class ExperimentRunner:
 
-    def __init__(self, base_results_dir="prompts_results"):
+class ExperimentRunner:
+    """
+    Runs analysis pipeline on LLM-generated tests.
+
+    Supports two modes:
+    - Legacy mode (extractor=None): Uses hardcoded OrderCalculator references
+    - Universal mode (extractor provided): Uses class info from extractor
+    """
+
+    # Legacy mode defaults (OrderCalculator)
+    LEGACY_CLASS_NAME = "OrderCalculator"
+    LEGACY_MODULE_NAME = "order_calculator"
+    LEGACY_HELPER_TYPES = ["Item"]
+    LEGACY_METHODS = [
+        '__init__', 'add_item', 'remove_item', 'get_subtotal',
+        'apply_discount', 'calculate_shipping', 'calculate_tax',
+        'calculate_total', 'total_items', 'list_items',
+        'is_empty', 'clear_order'
+    ]
+
+    def __init__(self, base_results_dir="prompts_results",
+                 extractor: Optional['ClassContextExtractor'] = None):
+        """
+        Initialize the experiment runner.
+
+        Args:
+            base_results_dir: Base directory for results (legacy mode path resolution)
+            extractor: ClassContextExtractor instance for universal mode
+        """
         self.base_results_dir = Path(base_results_dir)
         self.current_experiment = None
+        self.extractor = extractor
+
+        # Set class info based on mode
+        if extractor is not None:
+            info = extractor.get_class_info()
+            self.class_name = info.name
+            self.module_name = info.module_name
+            self.helper_types = info.helper_types
+            self.source_file = info.file_path
+            self.import_statement = info.import_statement
+            self.known_methods = info.public_methods
+            logger.info(f"Universal mode: analyzing tests for {self.class_name}")
+        else:
+            self.class_name = self.LEGACY_CLASS_NAME
+            self.module_name = self.LEGACY_MODULE_NAME
+            self.helper_types = self.LEGACY_HELPER_TYPES
+            self.source_file = None  # Will be resolved dynamically
+            self.import_statement = f"from {self.LEGACY_MODULE_NAME} import {self.LEGACY_CLASS_NAME}, Item"
+            self.known_methods = self.LEGACY_METHODS
+            logger.info("Legacy mode: using OrderCalculator defaults")
     
     def save_experiment_results(self, result_dir, strategy_result, model_name, strategy_name, context_type):
         timestamp = datetime.now().isoformat()
@@ -35,18 +98,26 @@ class ExperimentRunner:
         tests_file = result_dir / "tests.py"
         tests_file.write_text(test_code)
 
-        source_file = Path("../order_calculator.py")
-        if not source_file.exists():
-            source_file = Path("../../order_calculator.py")
-        if not source_file.exists():
-            source_file = Path("order_calculator.py")
-
-        if source_file.exists():
-            dest_file = result_dir / "order_calculator.py"
-            shutil.copy2(source_file, dest_file)
-            logger.info(f"✓ Copied {source_file} to test directory")
+        # Copy source file to test directory
+        if self.source_file is not None and self.source_file.exists():
+            # Universal mode - use extractor's source file
+            dest_file = result_dir / f"{self.module_name}.py"
+            shutil.copy2(self.source_file, dest_file)
+            logger.info(f"✓ Copied {self.source_file} to test directory")
         else:
-            logger.error("✗ order_calculator.py not found - tests will fail")
+            # Legacy mode - search for order_calculator.py
+            source_file = Path(f"../{self.module_name}.py")
+            if not source_file.exists():
+                source_file = Path(f"../../{self.module_name}.py")
+            if not source_file.exists():
+                source_file = Path(f"{self.module_name}.py")
+
+            if source_file.exists():
+                dest_file = result_dir / f"{self.module_name}.py"
+                shutil.copy2(source_file, dest_file)
+                logger.info(f"✓ Copied {source_file} to test directory")
+            else:
+                logger.error(f"✗ {self.module_name}.py not found - tests will fail")
 
         mutmut_test_file = result_dir / "mutmut_test.py"
         self.create_filtered_test_file(tests_file, mutmut_test_file)
@@ -275,28 +346,31 @@ class ExperimentRunner:
 
         imports = []
         test_classes = []
-        has_ordercalculator_import = False
+        has_source_import = False
+
+        # Build list of classes to exclude (main class + helper types)
+        classes_to_exclude = [self.class_name] + list(self.helper_types)
 
         for node in tree.body:
             if isinstance(node, (ast.Import, ast.ImportFrom)):
                 imports.append(node)
                 if isinstance(node, ast.ImportFrom):
-                    if node.module == 'order_calculator':
+                    if node.module == self.module_name:
                         for alias in node.names:
-                            if alias.name == 'OrderCalculator':
-                                has_ordercalculator_import = True
+                            if alias.name == self.class_name:
+                                has_source_import = True
                 elif isinstance(node, ast.Import):
                     for alias in node.names:
-                        if alias.name == 'order_calculator':
-                            has_ordercalculator_import = True
+                        if alias.name == self.module_name:
+                            has_source_import = True
 
             elif isinstance(node, ast.ClassDef):
                 if node.name.startswith('Test'):
                     test_classes.append(node)
                     logger.debug(f"Found test class: {node.name}")
-                elif node.name in ['OrderCalculator', 'Item']:
+                elif node.name in classes_to_exclude:
                     logger.warning(f"⚠️  Detected copied implementation class '{node.name}' in test code - removing it")
-                    logger.warning("   (Model should import from order_calculator, not redefine the class)")
+                    logger.warning(f"   (Model should import from {self.module_name}, not redefine the class)")
                 else:
                     test_classes.append(node)
 
@@ -312,23 +386,26 @@ class ExperimentRunner:
             logger.warning("ast.unparse not available, using fallback")
             return None
 
-        if not has_ordercalculator_import:
-            logger.info("✓ Auto-adding missing OrderCalculator import")
-            code = "from order_calculator import OrderCalculator, Item\n\n" + code
+        if not has_source_import:
+            logger.info(f"✓ Auto-adding missing {self.class_name} import")
+            code = self.import_statement + "\n\n" + code
 
         return code
 
     def _remove_copied_implementation_classes(self, code_text):
         """
-        Remove any copied OrderCalculator or Item class definitions from the test code.
+        Remove any copied implementation class definitions from the test code.
         This prevents the model's copied class from shadowing the actual module import.
         """
+        # Build list of classes to exclude
+        classes_to_exclude = [self.class_name] + list(self.helper_types)
+
         try:
             tree = ast.parse(code_text)
 
             classes_to_remove = []
             for node in tree.body:
-                if isinstance(node, ast.ClassDef) and node.name in ['OrderCalculator', 'Item']:
+                if isinstance(node, ast.ClassDef) and node.name in classes_to_exclude:
                     classes_to_remove.append(node.name)
 
             if not classes_to_remove:
@@ -338,7 +415,7 @@ class ExperimentRunner:
 
             # Rebuild AST without the copied classes
             new_body = [node for node in tree.body
-                       if not (isinstance(node, ast.ClassDef) and node.name in ['OrderCalculator', 'Item'])]
+                       if not (isinstance(node, ast.ClassDef) and node.name in classes_to_exclude)]
             new_tree = ast.Module(body=new_body, type_ignores=[])
 
             try:
@@ -349,7 +426,7 @@ class ExperimentRunner:
 
         except SyntaxError:
             # If code doesn't parse, try line-based removal
-            return self._remove_classes_line_based(code_text, ['OrderCalculator', 'Item'])
+            return self._remove_classes_line_based(code_text, classes_to_exclude)
 
     def _remove_classes_line_based(self, code_text, class_names):
         """Line-based fallback for removing class definitions."""
@@ -385,13 +462,14 @@ class ExperimentRunner:
         # First, remove any copied implementation classes
         code_text = self._remove_copied_implementation_classes(code_text)
 
+        # Check for existing import of the source module
         has_import = (
-            re.search(r'from\s+order_calculator\s+import.*OrderCalculator', code_text) or
-            re.search(r'import\s+order_calculator', code_text)
+            re.search(rf'from\s+{re.escape(self.module_name)}\s+import.*{re.escape(self.class_name)}', code_text) or
+            re.search(rf'import\s+{re.escape(self.module_name)}', code_text)
         )
 
         if not has_import:
-            logger.info("✓ Auto-adding missing OrderCalculator import (fallback)")
+            logger.info(f"✓ Auto-adding missing {self.class_name} import (fallback)")
             lines = code_text.split('\n')
 
             last_import_idx = -1
@@ -400,9 +478,9 @@ class ExperimentRunner:
                     last_import_idx = i
 
             if last_import_idx >= 0:
-                lines.insert(last_import_idx + 1, 'from order_calculator import OrderCalculator, Item')
+                lines.insert(last_import_idx + 1, self.import_statement)
             else:
-                lines.insert(0, 'from order_calculator import OrderCalculator, Item')
+                lines.insert(0, self.import_statement)
                 lines.insert(1, '')
 
             code_text = '\n'.join(lines)
@@ -526,8 +604,11 @@ class ExperimentRunner:
             'partial_coverage': 0
         }
 
+        # Look for the source module in coverage output
+        source_file_pattern = f'{self.module_name}.py'
+
         for line in lines:
-            if 'order_calculator.py' in line:
+            if source_file_pattern in line:
                 parts = line.split()
                 if len(parts) >= 6:
                     try:
@@ -778,19 +859,16 @@ class ExperimentRunner:
         }
     
     def detect_tested_methods(self, test_content):
-        known_methods = [
-            '__init__', 'add_item', 'remove_item', 'get_subtotal',
-            'apply_discount', 'calculate_shipping', 'calculate_tax',
-            'calculate_total', 'total_items', 'list_items',
-            'is_empty', 'clear_order'
-        ]
+        # Use dynamic method list from extractor or legacy defaults
+        known_methods = self.known_methods
 
         tested_methods = {}
         for method in known_methods:
             if method == '__init__':
-                pattern = r'OrderCalculator\s*\('
+                # Match class instantiation
+                pattern = rf'{re.escape(self.class_name)}\s*\('
             else:
-                pattern = rf'\.{method}\s*\('
+                pattern = rf'\.{re.escape(method)}\s*\('
 
             count = len(re.findall(pattern, test_content))
             if count > 0:
@@ -800,7 +878,7 @@ class ExperimentRunner:
             'methods_tested': list(tested_methods.keys()),
             'methods_tested_count': len(tested_methods),
             'total_methods': len(known_methods),
-            'method_coverage_rate': round((len(tested_methods) / len(known_methods)) * 100, 1),
+            'method_coverage_rate': round((len(tested_methods) / len(known_methods)) * 100, 1) if known_methods else 0,
             'method_call_counts': tested_methods
         }
 
@@ -1330,7 +1408,7 @@ class ExperimentRunner:
 
             tested_methods = scen.get('tested_methods', {})
             summary['methods_tested_count'] = tested_methods.get('methods_tested_count', 0)
-            summary['total_methods'] = tested_methods.get('total_methods', 12)
+            summary['total_methods'] = tested_methods.get('total_methods', len(self.known_methods))
             summary['method_coverage_rate'] = tested_methods.get('method_coverage_rate', 0)
 
             duplicates = scen.get('duplicates', {})
@@ -1459,7 +1537,7 @@ class ExperimentRunner:
 - Test success rate: {summary.get('test_success_rate', 0)}%
 
 ### Method Coverage
-- OrderCalculator methods tested: {summary.get('methods_tested_count', 0)}/{summary.get('total_methods', 12)}
+- {self.class_name} methods tested: {summary.get('methods_tested_count', 0)}/{summary.get('total_methods', len(self.known_methods))}
 - Method coverage rate: {summary.get('method_coverage_rate', 0)}%
 
 ### Test Structure

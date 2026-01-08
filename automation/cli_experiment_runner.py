@@ -11,9 +11,16 @@ The runner supports:
     - Batch experiment processing from configuration files
     - Multi-run experiment tracking (run_001, run_002, etc.)
     - Integration with analysis pipeline (coverage, mutation testing)
+    - Universal mode: Test generation for any Python class
+    - Legacy mode: Backwards compatible with OrderCalculator
 
 Usage:
+    # Legacy mode (OrderCalculator)
     python cli_experiment_runner.py --model MODEL --strategy STRATEGY --context CONTEXT
+
+    # Universal mode (any class)
+    python cli_experiment_runner.py --source-file path/to/class.py --model MODEL --strategy STRATEGY --context CONTEXT
+
     python cli_experiment_runner.py --config config.json
     python cli_experiment_runner.py --list-models
 """
@@ -35,11 +42,27 @@ logger = logging.getLogger(__name__)
 
 
 class CLIExperimentRunner:
+    """
+    Orchestrates CLI-based LLM experiments for test generation.
 
-    def __init__(self, base_results_dir="cli_results", run_id=None):
+    Supports two modes:
+    - Legacy mode (extractor=None): Uses OrderCalculator defaults
+    - Universal mode (extractor provided): Uses any Python class
+    """
+
+    def __init__(self, base_results_dir="cli_results", run_id=None, extractor=None):
+        """
+        Initialize the CLI experiment runner.
+
+        Args:
+            base_results_dir: Directory for storing results
+            run_id: Run identifier (number, "overwrite", or None for auto-increment)
+            extractor: ClassContextExtractor for universal mode (None for legacy)
+        """
         self.base_results_dir = Path(base_results_dir)
         self.base_results_dir.mkdir(parents=True, exist_ok=True)
         self.run_id = run_id
+        self.extractor = extractor
 
         self.cli_clients = {
             # Claude Code models (newest first)
@@ -120,10 +143,11 @@ class CLIExperimentRunner:
             with client_factory() as client:
                 logger.info(f"Initialized client: {client}")
 
+                # Create strategy with extractor for universal mode
                 if strategy_name == "simple_prompting":
-                    strategy = SimplePrompting()
+                    strategy = SimplePrompting(extractor=self.extractor)
                 elif strategy_name == "chain_of_thought_prompting":
-                    strategy = ChainOfThoughtPrompting()
+                    strategy = ChainOfThoughtPrompting(extractor=self.extractor)
                 else:
                     raise ValueError(f"Unknown strategy: {strategy_name}")
 
@@ -134,7 +158,8 @@ class CLIExperimentRunner:
                     logger.error("Strategy execution failed")
                     return None
 
-                analysis_runner = ExperimentRunner()
+                # Create analysis runner with extractor for universal mode
+                analysis_runner = ExperimentRunner(extractor=self.extractor)
 
                 experiment_data = analysis_runner.save_experiment_results(
                     result_dir,
@@ -239,15 +264,20 @@ Run ID modes:
   - --run-id N: Use specific run number (e.g., --run-id 1 creates run_001)
   - --run-id overwrite: Legacy mode, no run numbering (overwrites existing results)
 
+Source file modes:
+  - No --source-file: Legacy mode (OrderCalculator)
+  - --source-file path/to/class.py: Universal mode (any Python class)
+  - --source-file path/to/class.py --class-name ClassName: Specify class if multiple
+
 Examples:
-  # First run (creates run_001)
+  # Legacy mode - OrderCalculator (creates run_001)
   python cli_experiment_runner.py --model claude-code-sonnet-4.5 --strategy simple_prompting --context interface
 
-  # Second run (creates run_002)
-  python cli_experiment_runner.py --model claude-code-sonnet-4.5 --strategy simple_prompting --context interface
+  # Universal mode - any class
+  python cli_experiment_runner.py --source-file my_module.py --model claude-code-sonnet-4.5 --strategy simple_prompting --context full_context
 
-  # Specific run
-  python cli_experiment_runner.py --model claude-code-sonnet-4.5 --strategy simple_prompting --context interface --run-id 5
+  # Universal mode with specific class name
+  python cli_experiment_runner.py --source-file my_module.py --class-name MyClass --model claude-code-sonnet-4.5 --strategy simple_prompting --context interface
 
   # Batch with auto-increment
   python cli_experiment_runner.py --config cli_config.json
@@ -264,6 +294,14 @@ Examples:
                         help='List available models')
     parser.add_argument('--run-id', type=str, default=None,
                         help='Run identifier: number (e.g., 1), "overwrite", or omit for auto-increment')
+
+    # Universal mode arguments
+    parser.add_argument('--source-file', type=str, default=None,
+                        help='Path to Python source file (universal mode). If omitted, uses legacy OrderCalculator mode.')
+    parser.add_argument('--class-name', type=str, default=None,
+                        help='Name of the class to test (auto-detected if single class in file)')
+    parser.add_argument('--legacy', action='store_true',
+                        help='Force legacy mode even if --source-file is provided')
 
     args = parser.parse_args()
 
@@ -290,7 +328,32 @@ Examples:
                 print(f"Error: Invalid --run-id '{args.run_id}'. Use integer or 'overwrite'")
                 return
 
-    runner = CLIExperimentRunner(run_id=run_id)
+    # Create extractor for universal mode
+    extractor = None
+    if args.source_file and not args.legacy:
+        try:
+            from class_context_extractor import ClassContextExtractor
+            source_path = Path(args.source_file)
+            if not source_path.exists():
+                print(f"Error: Source file not found: {args.source_file}")
+                return
+            extractor = ClassContextExtractor(source_path, args.class_name)
+            info = extractor.get_class_info()
+            print(f"\n{'='*60}")
+            print(f"Universal mode: {info.name}")
+            print(f"Module: {info.module_name}")
+            print(f"Methods: {len(info.public_methods)}")
+            print(f"Helper types: {', '.join(info.helper_types) or 'None'}")
+            print(f"{'='*60}\n")
+        except Exception as e:
+            print(f"Error initializing class extractor: {e}")
+            return
+    else:
+        print("\n" + "="*60)
+        print("Legacy mode: OrderCalculator")
+        print("="*60 + "\n")
+
+    runner = CLIExperimentRunner(run_id=run_id, extractor=extractor)
 
     if args.list_models:
         runner.print_available_models()
