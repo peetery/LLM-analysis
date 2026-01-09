@@ -16,7 +16,6 @@ import time
 from pathlib import Path
 from datetime import datetime
 
-# Page configuration - must be first Streamlit command
 st.set_page_config(
     page_title="LLM Test Generator",
     page_icon="",
@@ -24,16 +23,10 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# =============================================================================
-# Custom CSS - Research Console Aesthetic
-# =============================================================================
-
 st.markdown("""
 <style>
-    /* Import fonts */
     @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=DM+Sans:wght@400;500;600;700&display=swap');
 
-    /* Root variables */
     :root {
         --bg-primary: #12141a;
         --bg-secondary: #1a1d24;
@@ -49,17 +42,14 @@ st.markdown("""
         --accent-blue: #60a5fa;
     }
 
-    /* Main container */
     .stApp {
         background: var(--bg-primary);
     }
 
-    /* Hide default Streamlit elements */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
 
-    /* Sidebar styling - wider default */
     [data-testid="stSidebar"] {
         background: var(--bg-secondary);
         border-right: 1px solid var(--border-color);
@@ -72,11 +62,9 @@ st.markdown("""
         width: 340px !important;
     }
 
-    /* Hide Streamlit default UI elements */
     [data-testid="stToolbar"] { display: none !important; }
     .stDeployButton { display: none !important; }
 
-    /* Hide sidebar collapse button - always visible */
     [data-testid="collapsedControl"],
     [data-testid="stSidebarCollapseButton"],
     button[aria-label="Close sidebar"],
@@ -85,7 +73,6 @@ st.markdown("""
         display: none !important;
     }
 
-    /* Force sidebar to always be visible */
     [data-testid="stSidebar"] {
         transform: none !important;
         position: relative !important;
@@ -97,7 +84,6 @@ st.markdown("""
         margin-left: 0 !important;
     }
 
-    /* Hide any keyboard shortcut hints */
     [data-testid="stSidebar"] [aria-label*="keyboard"],
     [data-testid="stSidebar"] [aria-label*="Keyboard"],
     [data-testid="stSidebar"] button[kind="header"],
@@ -105,7 +91,6 @@ st.markdown("""
         display: none !important;
     }
 
-    /* Custom HTML details/summary for Help section */
     .help-section {
         background: var(--bg-tertiary);
         border: 1px solid var(--border-color);
@@ -160,7 +145,6 @@ st.markdown("""
         margin: 0.15rem 0;
     }
 
-    /* Typography */
     h1, h2, h3, h4, h5, h6 {
         font-family: 'DM Sans', sans-serif !important;
         color: var(--text-primary) !important;
@@ -172,7 +156,6 @@ st.markdown("""
         color: var(--text-secondary) !important;
     }
 
-    /* Code and mono elements */
     code, pre, .stCode {
         font-family: 'JetBrains Mono', monospace !important;
         background: var(--bg-tertiary) !important;
@@ -180,7 +163,6 @@ st.markdown("""
         border-radius: 6px !important;
     }
 
-    /* Custom header */
     .console-header {
         background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
         border: 1px solid var(--border-color);
@@ -219,7 +201,6 @@ st.markdown("""
         letter-spacing: 0.1em;
     }
 
-    /* Section cards */
     .config-section {
         background: var(--bg-secondary);
         border: 1px solid var(--border-color);
@@ -238,7 +219,6 @@ st.markdown("""
         display: block;
     }
 
-    /* Status indicator */
     .status-badge {
         display: inline-flex;
         align-items: center;
@@ -268,7 +248,6 @@ st.markdown("""
         border: 1px solid rgba(248, 113, 113, 0.3);
     }
 
-    /* Info card */
     .info-card {
         background: var(--bg-tertiary);
         border: 1px solid var(--border-color);
@@ -303,7 +282,6 @@ st.markdown("""
         color: var(--accent-gold);
     }
 
-    /* Button styling */
     .stButton > button {
         font-family: 'DM Sans', sans-serif !important;
         font-weight: 600 !important;
@@ -327,7 +305,6 @@ st.markdown("""
         color: var(--text-muted) !important;
     }
 
-    /* Select boxes */
     .stSelectbox > div > div {
         background: var(--bg-tertiary) !important;
         border: 1px solid var(--border-color) !important;
@@ -342,7 +319,6 @@ st.markdown("""
         font-size: 0.9rem !important;
     }
 
-    /* File uploader */
     [data-testid="stFileUploader"] {
         background: var(--bg-tertiary);
         border: 2px dashed var(--border-color);
@@ -354,7 +330,6 @@ st.markdown("""
         border-color: var(--accent-gold-dim);
     }
 
-    /* Radio buttons */
     .stRadio > div {
         background: var(--bg-tertiary);
         border-radius: 8px;
@@ -366,19 +341,16 @@ st.markdown("""
         font-size: 0.85rem !important;
     }
 
-    /* Expander */
     .streamlit-expanderHeader {
         font-family: 'DM Sans', sans-serif !important;
         background: var(--bg-tertiary) !important;
         border-radius: 8px !important;
     }
 
-    /* Progress bar */
     .stProgress > div > div {
         background: var(--accent-gold) !important;
     }
 
-    /* Text input */
     .stTextInput input {
         background: var(--bg-tertiary) !important;
         border: 1px solid var(--border-color) !important;
@@ -387,7 +359,6 @@ st.markdown("""
         font-family: 'JetBrains Mono', monospace !important;
     }
 
-    /* Metrics */
     [data-testid="stMetricValue"] {
         font-family: 'JetBrains Mono', monospace !important;
         color: var(--accent-gold) !important;
@@ -398,13 +369,11 @@ st.markdown("""
         color: var(--text-secondary) !important;
     }
 
-    /* Divider */
     hr {
         border-color: var(--border-color) !important;
         margin: 1.5rem 0 !important;
     }
 
-    /* Tabs */
     .stTabs [data-baseweb="tab-list"] {
         background: var(--bg-secondary);
         border-radius: 8px;
@@ -425,7 +394,6 @@ st.markdown("""
         color: var(--accent-gold) !important;
     }
 
-    /* Console output */
     .console-output {
         background: var(--bg-primary);
         border: 1px solid var(--border-color);
@@ -444,7 +412,6 @@ st.markdown("""
     .console-output .log-warning { color: var(--accent-gold); }
     .console-output .log-error { color: var(--accent-red); }
 
-    /* Results grid */
     .results-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -477,23 +444,16 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-# =============================================================================
-# Helper Functions
-# =============================================================================
-
 def get_available_models():
     """Return available CLI models."""
     return {
         "Claude Code": {
-            "claude-code-opus-4.5": "Opus 4.5 (Max/Team/Enterprise)",
-            "claude-code-sonnet-4.5": "Sonnet 4.5 (Pro/Max/Team)",
-            "claude-code-opus-4.1": "Opus 4.1 (Max/Team/Enterprise)",
+            "claude-code-sonnet-4.5": "Sonnet 4.5",
+            "claude-code-opus-4.5": "Opus 4.5",
         },
         "Google Gemini": {
-            "gemini-3-pro": "Gemini 3 Pro Preview",
-            "gemini-3-flash": "Gemini 3 Flash Preview",
-            "gemini-2.5-pro": "Gemini 2.5 Pro",
-            "gemini-2.5-flash": "Gemini 2.5 Flash",
+            "gemini-3-pro": "Gemini 3 Pro",
+            "gemini-3-flash": "Gemini 3 Flash",
         }
     }
 
@@ -534,10 +494,6 @@ def run_experiment(source_file: str, model: str, strategy: str, context: str,
         bufsize=1
     )
 
-
-# =============================================================================
-# UI Components
-# =============================================================================
 
 def render_header():
     """Render the console header."""
@@ -594,12 +550,7 @@ def render_status(status: str):
     """, unsafe_allow_html=True)
 
 
-# =============================================================================
-# Main Application
-# =============================================================================
-
 def main():
-    # Initialize session state
     if "experiment_running" not in st.session_state:
         st.session_state.experiment_running = False
     if "experiment_output" not in st.session_state:
@@ -607,14 +558,11 @@ def main():
     if "last_result" not in st.session_state:
         st.session_state.last_result = None
 
-    # Header
     render_header()
 
-    # Sidebar - Configuration
     with st.sidebar:
         st.markdown('<span class="section-label">Configuration</span>', unsafe_allow_html=True)
 
-        # Mode selection
         mode = st.radio(
             "Mode",
             ["Universal (Any Class)", "Legacy (OrderCalculator)"],
@@ -623,7 +571,6 @@ def main():
 
         st.divider()
 
-        # Source file selection (Universal mode)
         source_file = None
         class_name = None
         class_info = None
@@ -631,7 +578,6 @@ def main():
         if mode == "Universal (Any Class)":
             st.markdown('<span class="section-label">Source File</span>', unsafe_allow_html=True)
 
-            # File path input
             file_input_method = st.radio(
                 "Input method",
                 ["Enter path", "Browse files"],
@@ -652,7 +598,6 @@ def main():
                     label_visibility="collapsed"
                 )
                 if uploaded:
-                    # Save temporarily
                     temp_path = Path(__file__).parent / "temp_upload.py"
                     temp_path.write_bytes(uploaded.getvalue())
                     source_file = str(temp_path)
@@ -664,7 +609,6 @@ def main():
                                unsafe_allow_html=True)
                     render_class_info(class_info)
                 else:
-                    # Multiple classes - need to specify
                     class_name = st.text_input(
                         "Class name (multiple classes detected)",
                         placeholder="ClassName"
@@ -674,7 +618,6 @@ def main():
                         if class_info:
                             render_class_info(class_info)
         else:
-            # Legacy mode - show OrderCalculator info
             order_calc_path = Path(__file__).parent / "order_calculator.py"
             if order_calc_path.exists():
                 class_info = get_class_info(order_calc_path)
@@ -684,7 +627,6 @@ def main():
 
         st.divider()
 
-        # Model selection
         st.markdown('<span class="section-label">Model</span>', unsafe_allow_html=True)
         models = get_available_models()
 
@@ -704,7 +646,6 @@ def main():
 
         st.divider()
 
-        # Strategy selection
         st.markdown('<span class="section-label">Prompting Strategy</span>',
                    unsafe_allow_html=True)
         strategy = st.selectbox(
@@ -719,7 +660,6 @@ def main():
 
         st.divider()
 
-        # Context level
         st.markdown('<span class="section-label">Context Level</span>',
                    unsafe_allow_html=True)
         context = st.selectbox(
@@ -735,14 +675,12 @@ def main():
 
         st.divider()
 
-        # Run configuration
         st.markdown('<span class="section-label">Run Options</span>',
                    unsafe_allow_html=True)
         run_id = st.number_input("Run ID (auto if 0)", min_value=0, value=0)
 
         st.divider()
 
-        # Run button
         can_run = (mode == "Legacy (OrderCalculator)" or
                    (source_file and Path(source_file).exists() and class_info))
 
@@ -752,11 +690,9 @@ def main():
             st.session_state.experiment_output = []
             st.rerun()
 
-    # Main content area
     col1, col2 = st.columns([2, 1])
 
     with col1:
-        # Experiment status
         st.markdown('<span class="section-label">Experiment Status</span>',
                    unsafe_allow_html=True)
 
@@ -777,13 +713,11 @@ def main():
             else:
                 st.caption("Configure and run an experiment")
 
-        # Console output
         st.markdown('<span class="section-label">Console Output</span>',
                    unsafe_allow_html=True)
 
         output_container = st.container()
 
-        # Run experiment if flagged
         if st.session_state.experiment_running:
             with st.spinner("Running experiment..."):
                 process = run_experiment(
@@ -798,7 +732,6 @@ def main():
                 output_lines = []
                 for line in process.stdout:
                     output_lines.append(line.strip())
-                    # Update output display
                     with output_container:
                         st.code("\n".join(output_lines[-50:]), language="")
 
@@ -822,7 +755,6 @@ def main():
                     st.code("No output yet. Run an experiment to see results.", language="")
 
     with col2:
-        # Quick info panel
         st.markdown('<span class="section-label">Configuration Summary</span>',
                    unsafe_allow_html=True)
 
@@ -847,7 +779,6 @@ def main():
         </div>
         """, unsafe_allow_html=True)
 
-        # Results preview (if available)
         if st.session_state.last_result:
             st.markdown('<span class="section-label">Last Run</span>',
                        unsafe_allow_html=True)
@@ -869,7 +800,6 @@ def main():
             </div>
             """, unsafe_allow_html=True)
 
-        # Help section - using HTML details instead of st.expander
         st.markdown("""
         <details class="help-section">
             <summary>Help</summary>
