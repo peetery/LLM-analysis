@@ -1,0 +1,60 @@
+# Matplotlib style for engineering thesis figures
+# Compatible with LaTeX documents
+
+# Font settings
+font.family: serif
+font.serif: Times New Roman, DejaVu Serif, serif
+font.size: 10
+text.usetex: False
+
+# Figure size (thesis column width ~6.5 inches)
+figure.figsize: 6.5, 4.0
+figure.dpi: 150
+figure.facecolor: white
+figure.edgecolor: white
+
+# Axes
+axes.labelsize: 10
+axes.titlesize: 11
+axes.titleweight: bold
+axes.linewidth: 0.8
+axes.grid: True
+axes.facecolor: white
+axes.edgecolor: black
+axes.spines.top: False
+axes.spines.right: False
+axes.prop_cycle: cycler('color', ['2E86AB', 'A23B72', 'F18F01', 'C73E1D', '95C623', '7B2D26', '3B1F2B'])
+
+# Grid
+grid.alpha: 0.3
+grid.linestyle: --
+grid.linewidth: 0.5
+
+# Legend
+legend.fontsize: 9
+legend.frameon: False
+legend.loc: best
+
+# Ticks
+xtick.labelsize: 9
+ytick.labelsize: 9
+xtick.direction: out
+ytick.direction: out
+xtick.major.width: 0.8
+ytick.major.width: 0.8
+
+# Lines
+lines.linewidth: 1.5
+lines.markersize: 6
+
+# Patches (bars, boxes)
+patch.linewidth: 0.5
+patch.edgecolor: black
+
+# Saving
+savefig.dpi: 300
+savefig.format: pdf
+savefig.bbox: tight
+savefig.pad_inches: 0.1
+savefig.facecolor: white
+savefig.edgecolor: none
