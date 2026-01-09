@@ -76,6 +76,35 @@ st.markdown("""
     [data-testid="stToolbar"] { display: none !important; }
     .stDeployButton { display: none !important; }
 
+    /* Hide sidebar collapse button - always visible */
+    [data-testid="collapsedControl"],
+    [data-testid="stSidebarCollapseButton"],
+    button[aria-label="Close sidebar"],
+    button[aria-label="Open sidebar"],
+    .st-emotion-cache-1egp75f {
+        display: none !important;
+    }
+
+    /* Force sidebar to always be visible */
+    [data-testid="stSidebar"] {
+        transform: none !important;
+        position: relative !important;
+    }
+
+    [data-testid="stSidebar"][aria-expanded="false"] {
+        display: block !important;
+        transform: none !important;
+        margin-left: 0 !important;
+    }
+
+    /* Hide any keyboard shortcut hints */
+    [data-testid="stSidebar"] [aria-label*="keyboard"],
+    [data-testid="stSidebar"] [aria-label*="Keyboard"],
+    [data-testid="stSidebar"] button[kind="header"],
+    [data-testid="stSidebar"] [data-testid="baseButton-header"] {
+        display: none !important;
+    }
+
     /* Custom HTML details/summary for Help section */
     .help-section {
         background: var(--bg-tertiary);
