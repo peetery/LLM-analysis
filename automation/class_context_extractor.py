@@ -406,7 +406,7 @@ class ClassContextExtractor:
         # Add helper types (simplified for interface levels)
         for name, _ in self.get_helper_types():
             helper_node = self._helper_types[name]
-            simplified = self._simplify_helper_type(helper_node)
+            simplified = self._simplify_helper_type(helper_node, body_level)
             parts.append(simplified)
 
         # Add main class with modified methods
@@ -438,11 +438,90 @@ class ClassContextExtractor:
 
         return '\n'.join(relevant_imports)
 
-    def _simplify_helper_type(self, node: ast.ClassDef) -> str:
-        """Create a simplified version of a helper type for interface levels."""
-        # For TypedDict and similar, we want to keep the full definition
-        # as it defines the structure
-        return self._get_node_source(node)
+    def _simplify_helper_type(self, node: ast.ClassDef, body_level: str = 'docstring') -> str:
+        """Create a simplified version of a helper type for interface levels.
+
+        Args:
+            node: The AST node of the helper type
+            body_level: 'pass' for interface (no docstrings), 'docstring' to keep docstrings
+        """
+        if body_level == 'docstring':
+            # Keep docstrings
+            return self._get_node_source(node)
+
+        # Strip docstrings for 'pass' (interface) level
+        lines = []
+
+        # Add decorators
+        for decorator in node.decorator_list:
+            lines.append(f"@{self._get_decorator_source(decorator)}")
+
+        # Class header
+        bases = ', '.join(self._get_base_name(b) for b in node.bases)
+        if bases:
+            lines.append(f"class {node.name}({bases}):")
+        else:
+            lines.append(f"class {node.name}:")
+
+        # Class body without docstrings
+        has_body = False
+        for child in node.body:
+            # Skip docstrings (first Expr with Constant string)
+            if isinstance(child, ast.Expr) and isinstance(child.value, ast.Constant):
+                if isinstance(child.value.value, str):
+                    continue
+
+            # Add other body elements
+            if isinstance(child, ast.AnnAssign):
+                # Use ast.unparse for clean output without extra indentation
+                try:
+                    ann_code = ast.unparse(child)
+                except:
+                    ann_code = self._get_node_source(child).strip()
+                lines.append(f"    {ann_code}")
+                has_body = True
+            elif isinstance(child, ast.Assign):
+                try:
+                    assign_code = ast.unparse(child)
+                except:
+                    assign_code = self._get_node_source(child).strip()
+                lines.append(f"    {assign_code}")
+                has_body = True
+            elif isinstance(child, ast.FunctionDef):
+                # For methods in helper types (like properties), strip docstrings
+                method_lines = []
+                indent = "    "
+
+                # Decorators
+                for decorator in child.decorator_list:
+                    dec_source = self._get_decorator_source(decorator)
+                    method_lines.append(f"{indent}@{dec_source}")
+
+                # Signature
+                sig = self._create_method_signature(child)
+                method_lines.append(f"{indent}{sig}")
+
+                # Body - just return statement or pass (skip docstrings)
+                method_body = [n for n in child.body
+                              if not (isinstance(n, ast.Expr) and
+                                     isinstance(n.value, ast.Constant) and
+                                     isinstance(n.value.value, str))]
+                if method_body and isinstance(method_body[0], ast.Return):
+                    try:
+                        ret_source = ast.unparse(method_body[0])
+                    except:
+                        ret_source = self._get_node_source(method_body[0]).strip()
+                    method_lines.append(f"{indent}    {ret_source}")
+                else:
+                    method_lines.append(f"{indent}    pass")
+
+                lines.append('\n'.join(method_lines))
+                has_body = True
+
+        if not has_body:
+            lines.append("    pass")
+
+        return '\n'.join(lines)
 
     def _create_interface_class(self, body_level: str) -> str:
         """Create the class with interface-level methods."""
@@ -473,13 +552,19 @@ class ClassContextExtractor:
                 lines.append(method_code)
                 has_body = True
             elif isinstance(node, ast.AnnAssign):
-                # Class-level annotated assignment
-                ann_code = self._get_node_source(node)
+                # Class-level annotated assignment - use ast.unparse for clean output
+                try:
+                    ann_code = ast.unparse(node)
+                except:
+                    ann_code = self._get_node_source(node).strip()
                 lines.append(f"    {ann_code}")
                 has_body = True
             elif isinstance(node, ast.Assign):
-                # Class-level assignment
-                assign_code = self._get_node_source(node)
+                # Class-level assignment - use ast.unparse for clean output
+                try:
+                    assign_code = ast.unparse(node)
+                except:
+                    assign_code = self._get_node_source(node).strip()
                 lines.append(f"    {assign_code}")
                 has_body = True
 
