@@ -294,6 +294,8 @@ Examples:
                         help='List available models')
     parser.add_argument('--run-id', type=str, default=None,
                         help='Run identifier: number (e.g., 1), "overwrite", or omit for auto-increment')
+    parser.add_argument('--results-dir', type=str, default='cli_results',
+                        help='Directory for storing results (default: cli_results)')
 
     # Universal mode arguments
     parser.add_argument('--source-file', type=str, default=None,
@@ -353,7 +355,11 @@ Examples:
         print("Legacy mode: OrderCalculator")
         print("="*60 + "\n")
 
-    runner = CLIExperimentRunner(run_id=run_id, extractor=extractor)
+    runner = CLIExperimentRunner(
+        base_results_dir=args.results_dir,
+        run_id=run_id,
+        extractor=extractor
+    )
 
     if args.list_models:
         runner.print_available_models()

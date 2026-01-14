@@ -469,7 +469,7 @@ def get_class_info(file_path: Path, class_name: str = None):
 
 
 def run_experiment(source_file: str, model: str, strategy: str, context: str,
-                   class_name: str = None, run_id: int = None):
+                   class_name: str = None, run_id: int = None, results_dir: str = None):
     """Run experiment using CLI runner."""
     cmd = [
         sys.executable, "cli_experiment_runner.py",
@@ -484,6 +484,8 @@ def run_experiment(source_file: str, model: str, strategy: str, context: str,
         cmd.extend(["--class-name", class_name])
     if run_id:
         cmd.extend(["--run-id", str(run_id)])
+    if results_dir:
+        cmd.extend(["--results-dir", results_dir])
 
     return subprocess.Popen(
         cmd,
@@ -679,6 +681,12 @@ def main():
                    unsafe_allow_html=True)
         run_id = st.number_input("Run ID (auto if 0)", min_value=0, value=0)
 
+        results_dir = st.text_input(
+            "Results directory",
+            value="cli_results",
+            help="Directory for storing results. Use different name to keep test runs separate."
+        )
+
         st.divider()
 
         can_run = (mode == "Legacy (OrderCalculator)" or
@@ -726,7 +734,8 @@ def main():
                     strategy,
                     context,
                     class_name,
-                    run_id if run_id > 0 else None
+                    run_id if run_id > 0 else None,
+                    results_dir if results_dir != "cli_results" else None
                 )
 
                 output_lines = []

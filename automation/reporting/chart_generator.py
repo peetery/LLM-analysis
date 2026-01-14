@@ -68,18 +68,18 @@ class ThesisChartGenerator:
 
     METRIC_NAMES_PL = {
         'statement_coverage': 'Pokrycie instrukcji',
-        'branch_coverage': 'Pokrycie rozgalezien',
+        'branch_coverage': 'Pokrycie rozgałęzień',
         'mutation_score': 'Wynik mutacji',
-        'test_success_rate': 'Wskaznik sukcesu testow',
+        'test_success_rate': 'Wskaźnik sukcesu testów',
         'total_test_methods': 'Liczba metod testowych',
         'total_assertions': 'Liczba asercji',
-        'overall_quality_score': 'Ogolny wynik jakosci',
+        'overall_quality_score': 'Ogólny wynik jakości',
         'response_time': 'Czas odpowiedzi',
-        'assertion_quality_score': 'Jakosc asercji',
-        'naming_quality_score': 'Jakosc nazewnictwa',
-        'independence_score': 'Niezaleznosc testow',
-        'avg_assertions_per_test': 'Srednia asercji na test',
-        'average_test_length': 'Srednia dlugosc testu'
+        'assertion_quality_score': 'Jakość asercji',
+        'naming_quality_score': 'Jakość nazewnictwa',
+        'independence_score': 'Niezależność testów',
+        'avg_assertions_per_test': 'Średnia asercji na test',
+        'average_test_length': 'Średnia długość testu'
     }
 
     STRATEGY_NAMES_PL = {
@@ -90,7 +90,7 @@ class ThesisChartGenerator:
     CONTEXT_NAMES_PL = {
         'interface': 'Interfejs',
         'interface_docstring': 'Interfejs + Docstring',
-        'full_context': 'Pelny kontekst'
+        'full_context': 'Pełny kontekst'
     }
 
     def __init__(self,
@@ -158,8 +158,13 @@ class ThesisChartGenerator:
         saved_paths = []
         for fmt in formats:
             path = self.output_dir / fmt / f"{name}.{fmt}"
-            fig.savefig(path, format=fmt, dpi=300, bbox_inches='tight',
-                       facecolor='white', edgecolor='none')
+            # PNG z przezroczystym tlem, PDF z bialym
+            if fmt == 'png':
+                fig.savefig(path, format=fmt, dpi=300, bbox_inches='tight',
+                           facecolor='none', edgecolor='none', transparent=True)
+            else:
+                fig.savefig(path, format=fmt, dpi=300, bbox_inches='tight',
+                           facecolor='white', edgecolor='none')
             saved_paths.append(path)
             logger.info(f"Zapisano: {path}")
 
@@ -233,7 +238,7 @@ class ThesisChartGenerator:
 
         ax.set_xlabel('')
         ax.set_ylabel(ylabel or self._format_metric_name(metric))
-        ax.set_title(title or f'Rozklad {self._format_metric_name(metric)} wg modelu')
+        ax.set_title(title or f'Rozkład {self._format_metric_name(metric)} wg modelu')
 
         plt.xticks(rotation=45, ha='right')
         plt.tight_layout()
@@ -307,8 +312,12 @@ class ThesisChartGenerator:
                     ax=ax
                 )
             plt.xticks(rotation=45, ha='right')
-            ax.legend(title='Poziom kontekstu', loc='upper right',
-                     labels=[self._format_context_name(c) for c in self.CONTEXT_ORDER])
+            # Pobierz handles i ustaw polskie etykiety zachowujac kolory
+            handles, _ = ax.get_legend_handles_labels()
+            ax.legend(handles, [self._format_context_name(c) for c in self.CONTEXT_ORDER],
+                     title='Poziom kontekstu', loc='upper center',
+                     bbox_to_anchor=(0.5, -0.40), ncol=3)
+            plt.subplots_adjust(bottom=0.35)
         else:
             fig, ax = plt.subplots(figsize=(6, 5))
 
@@ -509,7 +518,7 @@ class ThesisChartGenerator:
         ax.set_ylim(0, 100)
 
         ax.legend(loc='upper right', bbox_to_anchor=(1.3, 1.0), title='Model')
-        ax.set_title(title or 'Porownanie modeli wg metryk', y=1.08)
+        ax.set_title(title or 'Porównanie modeli wg metryk', y=1.08)
 
         plt.tight_layout()
         self._save_figure(fig, 'radar_chart_models')
@@ -527,7 +536,7 @@ class ThesisChartGenerator:
         """
         Tworzy wykres slupkowy z 95% przedzialem ufnosci.
         """
-        # Oblicz srednia i CI
+        # Oblicz średnia i CI
         agg = df.groupby(group_by)[metric].agg(['mean', 'std', 'count'])
         agg['ci'] = 1.96 * agg['std'] / np.sqrt(agg['count'])
         agg = agg.sort_values('mean', ascending=False)
@@ -682,7 +691,7 @@ class ThesisChartGenerator:
             compare_name_pl = 'modelu'
             plt.xticks(rotation=45, ha='right')
 
-        ax.set_title(title or f'Rozklad {self._format_metric_name(metric)} wg {compare_name_pl}')
+        ax.set_title(title or f'Rozkład {self._format_metric_name(metric)} wg {compare_name_pl}')
 
         plt.tight_layout()
         self._save_figure(fig, f'violin_{metric}_by_{compare_by}')
@@ -736,7 +745,7 @@ class ThesisChartGenerator:
             pivot.columns = [self._format_context_name(c) for c in pivot.columns]
             sns.heatmap(pivot, annot=True, fmt='.1f', cmap='RdYlGn',
                        ax=ax3, cbar=False, linewidths=0.5)
-            ax3.set_title('C) Wynik jakosci: Model x Kontekst')
+            ax3.set_title('C) Wynik jakości: Model x Kontekst')
 
         # 4. Skrzypce - rozklad liczby testow
         ax4 = fig.add_subplot(gs[1, 1])
@@ -746,9 +755,9 @@ class ThesisChartGenerator:
                           palette=self.CONTEXT_COLORS, ax=ax4, inner='box',
                           order=available_contexts)
             ax4.set_xticklabels([self._format_context_name(c) for c in available_contexts])
-            ax4.set_ylabel('Liczba wygenerowanych testow')
+            ax4.set_ylabel('Liczba wygenerowanych testów')
             ax4.set_xlabel('')
-            ax4.set_title('D) Liczba testow wg kontekstu')
+            ax4.set_title('D) Liczba testów wg kontekstu')
 
         if title:
             fig.suptitle(title, fontsize=14, fontweight='bold', y=1.02)
@@ -773,16 +782,16 @@ class ThesisChartGenerator:
         logger.info("[6.3.2] Wykresy porownania modeli...")
         if 'statement_coverage' in df.columns:
             self.boxplot_by_model(df, 'statement_coverage',
-                                 title='Rozklad pokrycia instrukcji wg modelu',
+                                 title='Rozkład pokrycia instrukcji wg modelu',
                                  ylabel='Pokrycie (%)')
 
         if 'mutation_score' in df.columns:
             self.boxplot_by_model(df, 'mutation_score',
-                                 title='Rozklad wyniku mutacji wg modelu')
+                                 title='Rozkład wyniku mutacji wg modelu')
 
         if 'overall_quality_score' in df.columns:
             self.bar_chart_with_ci(df, 'overall_quality_score', 'model',
-                                  title='Ogolny wynik jakosci wg modelu (95% CI)')
+                                  title='Ogólny wynik jakości wg modelu (95% CI)')
 
         self.radar_chart_models(df)
 
