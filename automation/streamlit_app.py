@@ -1538,47 +1538,26 @@ def main():
         """, unsafe_allow_html=True)
 
         if st.session_state.last_result:
-            st.markdown('<span class="section-label">Last Run</span>',
-                       unsafe_allow_html=True)
+            st.markdown("**Last Run**")
 
             result = st.session_state.last_result
             metrics = st.session_state.experiment_metrics
 
-            status_color = 'var(--accent-green)' if result.get('success') else 'var(--accent-red)'
-            status_text = 'Success' if result.get('success') else 'Failed'
+            # Time and status
+            st.caption(f"⏰ {result.get('timestamp', 'N/A')}")
+            if result.get('success'):
+                st.success("✅ Success")
+            else:
+                st.error("❌ Failed")
 
-            metrics_html = ""
+            # Metrics if available
             if metrics and result.get('success'):
-                metrics_html = f"""
-                <div class="info-row">
-                    <span class="info-label">Coverage</span>
-                    <span class="info-value highlight">{metrics.get('statement_coverage', 0):.1f}%</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Mutation</span>
-                    <span class="info-value">{metrics.get('mutation_score', 0):.1f}%</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Quality</span>
-                    <span class="info-value">{metrics.get('quality_score', 0):.0f}/100</span>
-                </div>
-                """
-
-            st.markdown(f"""
-            <div class="info-card">
-                <div class="info-row">
-                    <span class="info-label">Time</span>
-                    <span class="info-value">{result.get('timestamp', 'N/A')}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Status</span>
-                    <span class="info-value" style="color: {status_color}">
-                        {status_text}
-                    </span>
-                </div>
-                {metrics_html}
-            </div>
-            """, unsafe_allow_html=True)
+                col_a, col_b = st.columns(2)
+                with col_a:
+                    st.metric("Coverage", f"{metrics.get('statement_coverage', 0):.1f}%")
+                with col_b:
+                    st.metric("Mutation", f"{metrics.get('mutation_score', 0):.1f}%")
+                st.metric("Quality", f"{metrics.get('quality_score', 0):.0f}/100")
 
         st.markdown("""
         <details class="help-section">
