@@ -43,6 +43,9 @@ class ThesisChartGenerator:
     - Wymiary odpowiednie do pracy dyplomowej
     """
 
+    # Kolor domyslny dla wykresow gdzie rozroznienie kolorami nie ma znaczenia
+    DEFAULT_COLOR = '#2E86AB'
+
     COLORS = {
         'claude-code-opus-4.5': '#2E86AB',
         'claude-code-sonnet-4.5': '#A23B72',
@@ -69,7 +72,7 @@ class ThesisChartGenerator:
     METRIC_NAMES_PL = {
         'statement_coverage': 'Pokrycie instrukcji',
         'branch_coverage': 'Pokrycie rozgałęzień',
-        'mutation_score': 'Wynik mutacji',
+        'mutation_score': 'Wynik mutacyjny',
         'test_success_rate': 'Wskaźnik sukcesu testów',
         'total_test_methods': 'Liczba metod testowych',
         'total_assertions': 'Liczba asercji',
@@ -83,8 +86,8 @@ class ThesisChartGenerator:
     }
 
     STRATEGY_NAMES_PL = {
-        'simple_prompting': 'Simple Prompting',
-        'chain_of_thought_prompting': 'Chain-of-Thought'
+        'simple_prompting': 'Strategia jednokrokowa',
+        'chain_of_thought_prompting': 'Strategia wielokrokowa'
     }
 
     CONTEXT_NAMES_PL = {
@@ -199,12 +202,12 @@ class ThesisChartGenerator:
                         show_points: bool = True) -> plt.Figure:
         """
         Tworzy boxplot rozkladu metryki dla kazdego modelu.
+        Uzywa jednego koloru dla wszystkich modeli (nazwy sa na osi X).
         """
         fig, ax = plt.subplots(figsize=(8, 5))
 
         # Kolejnosc modeli wg sredniej (malejaco)
         order = df.groupby('model')[metric].mean().sort_values(ascending=False).index.tolist()
-        palette = [self._get_model_color(m) for m in order]
 
         if HAS_SEABORN:
             sns.boxplot(
@@ -212,7 +215,7 @@ class ThesisChartGenerator:
                 x='model',
                 y=metric,
                 order=order,
-                palette=palette,
+                color=self.DEFAULT_COLOR,
                 ax=ax,
                 width=0.6,
                 linewidth=1
@@ -232,8 +235,8 @@ class ThesisChartGenerator:
         else:
             data_by_model = [df[df['model'] == m][metric].dropna().values for m in order]
             bp = ax.boxplot(data_by_model, patch_artist=True)
-            for patch, color in zip(bp['boxes'], palette):
-                patch.set_facecolor(color)
+            for patch in bp['boxes']:
+                patch.set_facecolor(self.DEFAULT_COLOR)
             ax.set_xticklabels(order)
 
         ax.set_xlabel('')
@@ -284,7 +287,7 @@ class ThesisChartGenerator:
 
         ax.set_ylabel(self._format_metric_name(metric))
         ax.set_xlabel('')
-        ax.set_title(title or f'{self._format_metric_name(metric)}: Simple Prompting vs Chain-of-Thought')
+        ax.set_title(title or f'{self._format_metric_name(metric)}: porównanie strategii')
 
         plt.tight_layout()
         self._save_figure(fig, f'boxplot_{metric}_by_strategy')
@@ -543,14 +546,9 @@ class ThesisChartGenerator:
 
         fig, ax = plt.subplots(figsize=(8, 5))
 
-        if group_by == 'model':
-            colors = [self._get_model_color(x) for x in agg.index]
-        elif group_by == 'strategy':
-            colors = [self.STRATEGY_COLORS.get(x, '#888') for x in agg.index]
-        elif group_by == 'context':
-            colors = [self.CONTEXT_COLORS.get(x, '#888') for x in agg.index]
-        else:
-            colors = ['#2E86AB'] * len(agg)
+        # Jeden kolor dla wszystkich slupkow - nazwy kategorii sa na osi X,
+        # wiec rozroznienie kolorami nie ma znaczenia i moze wprowadzac w blad
+        colors = self.DEFAULT_COLOR
 
         bars = ax.bar(
             range(len(agg)),
@@ -659,23 +657,38 @@ class ThesisChartGenerator:
         if compare_by == 'strategy':
             palette = self.STRATEGY_COLORS
             order = None
+            use_single_color = False
         elif compare_by == 'context':
             palette = self.CONTEXT_COLORS
             order = self.CONTEXT_ORDER
+            use_single_color = False
         else:
-            palette = self.COLORS
+            # Dla modeli uzywamy jednego koloru - nazwy sa na osi X
+            palette = None
             order = None
+            use_single_color = True
 
         if HAS_SEABORN:
-            sns.violinplot(
-                data=df,
-                x=compare_by,
-                y=metric,
-                palette=palette,
-                order=order,
-                ax=ax,
-                inner='box'
-            )
+            if use_single_color:
+                sns.violinplot(
+                    data=df,
+                    x=compare_by,
+                    y=metric,
+                    color=self.DEFAULT_COLOR,
+                    order=order,
+                    ax=ax,
+                    inner='box'
+                )
+            else:
+                sns.violinplot(
+                    data=df,
+                    x=compare_by,
+                    y=metric,
+                    palette=palette,
+                    order=order,
+                    ax=ax,
+                    inner='box'
+                )
 
         ax.set_xlabel('')
         ax.set_ylabel(self._format_metric_name(metric))
@@ -716,10 +729,9 @@ class ThesisChartGenerator:
             agg = df.groupby('model')['statement_coverage'].agg(['mean', 'std', 'count'])
             agg['ci'] = 1.96 * agg['std'] / np.sqrt(agg['count'])
             agg = agg.sort_values('mean', ascending=False)
-            colors = [self._get_model_color(x) for x in agg.index]
 
             ax1.bar(range(len(agg)), agg['mean'], yerr=agg['ci'], capsize=3,
-                   color=colors, edgecolor='black', linewidth=0.5)
+                   color=self.DEFAULT_COLOR, edgecolor='black', linewidth=0.5)
             ax1.set_xticks(range(len(agg)))
             short_names = [m.split('-')[-1] if '-' in m else m for m in agg.index]
             ax1.set_xticklabels(short_names, rotation=45, ha='right')
@@ -731,10 +743,10 @@ class ThesisChartGenerator:
         if 'mutation_score' in df.columns and HAS_SEABORN:
             sns.boxplot(data=df, x='strategy', y='mutation_score',
                        palette=self.STRATEGY_COLORS, ax=ax2)
-            ax2.set_xticklabels(['Simple', 'Chain-of-Thought'])
-            ax2.set_ylabel('Wynik mutacji (%)')
+            ax2.set_xticklabels(['Jednokrokowa', 'Wielokrokowa'])
+            ax2.set_ylabel('Wynik mutacyjny (%)')
             ax2.set_xlabel('')
-            ax2.set_title('B) Wynik mutacji wg strategii')
+            ax2.set_title('B) Wynik mutacyjny wg strategii')
 
         # 3. Heatmapa model vs kontekst
         ax3 = fig.add_subplot(gs[1, 0])
