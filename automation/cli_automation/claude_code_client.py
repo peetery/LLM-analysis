@@ -27,7 +27,7 @@ import platform
 import time
 import json
 from pathlib import Path
-from typing import Optional, List
+from typing import List
 
 from .base_cli_client import BaseCLIClient
 
@@ -307,55 +307,3 @@ class ClaudeCodeClient(BaseCLIClient):
         """
         return self.SUPPORTED_MODELS.copy()
 
-    def send_prompt_with_context(
-        self,
-        prompt: str,
-        context_files: Optional[List[str]] = None
-    ) -> str:
-        """
-        Send prompt with additional context files.
-
-        This method allows providing source files as context to the model,
-        which can improve test generation quality.
-
-        Args:
-            prompt: The prompt text
-            context_files: List of file paths to include as context
-
-        Returns:
-            The model's response text
-        """
-        if not context_files:
-            return self.send_prompt(prompt)
-
-        logger.info(
-            "Sending prompt with %d context files",
-            len(context_files)
-        )
-
-        args = ["claude"]
-
-        if self.model:
-            args.extend(["--model", self.model])
-
-        for file_path in context_files:
-            if Path(file_path).exists():
-                args.extend(["--context", file_path])
-            else:
-                logger.warning("Context file not found: %s", file_path)
-
-        with tempfile.NamedTemporaryFile(
-            mode='w',
-            suffix='.md',
-            delete=False,
-            encoding='utf-8'
-        ) as f:
-            f.write(prompt)
-            prompt_file = f.name
-
-        try:
-            args.extend(["--file", prompt_file])
-            result = self.execute_command(args)
-            return result.stdout
-        finally:
-            Path(prompt_file).unlink(missing_ok=True)

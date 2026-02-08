@@ -160,3 +160,31 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# Claude Code
+.claude/
+CLAUDE.md
+
+# Temporary files
+tmpclaude-*/
+nul
+
+# Office temp files
+~$*.pptx
+~$*.docx
+
+# Coverage
+.coverage
+htmlcov/
+
+# Backup
+automation/backup/
+
+# LaTeX thesis (separate archive)
+praca_inzynierska/
+
+# Archive of removed files
+_archive/
+
+# IDE
+.idea/

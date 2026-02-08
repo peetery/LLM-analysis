@@ -35,7 +35,7 @@ import time
 import json
 import os
 from pathlib import Path
-from typing import Optional, List
+from typing import List
 
 from .base_cli_client import BaseCLIClient
 
@@ -354,31 +354,3 @@ IMPORTANT: Return the complete code in your response. Do NOT use write_file, edi
         """
         return self.SUPPORTED_MODELS.copy()
 
-    def send_prompt_with_context(
-        self,
-        prompt: str,
-        context_files: Optional[List[str]] = None
-    ) -> str:
-        """
-        Send prompt with additional context files.
-
-        Note: Context file support is not yet implemented for Gemini CLI.
-        This method falls back to regular prompt sending.
-
-        Args:
-            prompt: The prompt text
-            context_files: List of file paths to include as context (not used)
-
-        Returns:
-            The model's response text
-        """
-        if not context_files:
-            return self.send_prompt(prompt)
-
-        logger.info(
-            "Sending prompt with %d context files",
-            len(context_files)
-        )
-        logger.warning("Context files not yet implemented for Gemini CLI")
-
-        return self.send_prompt(prompt)

@@ -124,12 +124,12 @@ class PromptStrategy:
             if prompt_file.exists():
                 try:
                     self.prompts[key] = prompt_file.read_text(encoding='utf-8')
-                    logger.info(f"✓ Loaded prompt: {strategy}/{context} ({len(self.prompts[key])} chars)")
+                    logger.info(f"Loaded prompt: {strategy}/{context} ({len(self.prompts[key])} chars)")
                 except Exception as e:
-                    logger.error(f"✗ Error reading prompt file {prompt_file}: {e}")
+                    logger.error(f"Error reading prompt file {prompt_file}: {e}")
                     return None
             else:
-                logger.error(f"✗ Prompt not found: {prompt_file}")
+                logger.error(f"Prompt not found: {prompt_file}")
                 if prompt_file.parent.exists():
                     available_files = list(prompt_file.parent.iterdir())
                     logger.error(f"Available files in {prompt_file.parent}: {[f.name for f in available_files]}")
@@ -250,7 +250,7 @@ class SimplePrompting(PromptStrategy):
             # Universal mode - dynamic prompt generation
             placeholders = self._get_placeholders(context_type)
             final_prompt = self.template_manager.get_simple_prompt(placeholders)
-            logger.info(f"✓ Generated dynamic prompt for {self.extractor.class_name}")
+            logger.info(f"Generated dynamic prompt for {self.extractor.class_name}")
         else:
             # Legacy mode - load from file
             final_prompt = self.load_specific_prompt("simple_prompting", context_type)
@@ -296,10 +296,10 @@ class ChainOfThoughtPrompting(PromptStrategy):
         for context in ['interface', 'interface_docstring', 'full_context']:
             prompt_file = self.base_path / "chain_of_thought_prompting" / context / "prompt.txt"
             if prompt_file.exists():
-                logger.info(f"✓ Found CoT prompt file for {context}: {prompt_file}")
+                logger.info(f"Found CoT prompt file for {context}: {prompt_file}")
                 cot_prompts[context] = True
             else:
-                logger.warning(f"✗ Missing CoT prompt file for {context}: {prompt_file}")
+                logger.warning(f"Missing CoT prompt file for {context}: {prompt_file}")
 
         return cot_prompts
 
@@ -321,7 +321,7 @@ class ChainOfThoughtPrompting(PromptStrategy):
             # Universal mode - dynamic prompt generation
             placeholders = self._get_placeholders(context_type)
             steps = self.template_manager.get_cot_prompts(placeholders)
-            logger.info(f"✓ Generated dynamic CoT prompts for {self.extractor.class_name}")
+            logger.info(f"Generated dynamic CoT prompts for {self.extractor.class_name}")
         else:
             # Legacy mode - load and parse from file
             cot_content = self.load_specific_prompt("chain_of_thought_prompting", context_type)

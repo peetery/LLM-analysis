@@ -476,14 +476,14 @@ class ClassContextExtractor:
                 # Use ast.unparse for clean output without extra indentation
                 try:
                     ann_code = ast.unparse(child)
-                except:
+                except Exception:
                     ann_code = self._get_node_source(child).strip()
                 lines.append(f"    {ann_code}")
                 has_body = True
             elif isinstance(child, ast.Assign):
                 try:
                     assign_code = ast.unparse(child)
-                except:
+                except Exception:
                     assign_code = self._get_node_source(child).strip()
                 lines.append(f"    {assign_code}")
                 has_body = True
@@ -509,7 +509,7 @@ class ClassContextExtractor:
                 if method_body and isinstance(method_body[0], ast.Return):
                     try:
                         ret_source = ast.unparse(method_body[0])
-                    except:
+                    except Exception:
                         ret_source = self._get_node_source(method_body[0]).strip()
                     method_lines.append(f"{indent}    {ret_source}")
                 else:
@@ -555,15 +555,14 @@ class ClassContextExtractor:
                 # Class-level annotated assignment - use ast.unparse for clean output
                 try:
                     ann_code = ast.unparse(node)
-                except:
+                except Exception:
                     ann_code = self._get_node_source(node).strip()
                 lines.append(f"    {ann_code}")
                 has_body = True
             elif isinstance(node, ast.Assign):
-                # Class-level assignment - use ast.unparse for clean output
                 try:
                     assign_code = ast.unparse(node)
-                except:
+                except Exception:
                     assign_code = self._get_node_source(node).strip()
                 lines.append(f"    {assign_code}")
                 has_body = True
@@ -655,22 +654,21 @@ class ClassContextExtractor:
         """Convert an annotation AST node to string."""
         try:
             return ast.unparse(annotation)
-        except:
-            # Fallback for older Python
+        except Exception:
             return self._get_node_source(annotation)
 
     def _value_to_string(self, value: ast.expr) -> str:
         """Convert a value AST node to string."""
         try:
             return ast.unparse(value)
-        except:
+        except Exception:
             return self._get_node_source(value)
 
     def _get_decorator_source(self, decorator: ast.expr) -> str:
         """Get source code for a decorator."""
         try:
             return ast.unparse(decorator)
-        except:
+        except Exception:
             return self._get_node_source(decorator)
 
     def _format_docstring(self, docstring: str, indent: int = 1) -> str:
@@ -698,7 +696,7 @@ class ClassContextExtractor:
         # Fallback to ast.unparse
         try:
             return ast.unparse(node)
-        except:
+        except Exception:
             return ""
 
 

@@ -1,33 +1,15 @@
 """
 Mutation Testing Backfill Script.
 
-This script enables running mutation testing on Windows-generated test results
-by executing it in WSL/Linux where fork support is available. It identifies
-result directories without valid mutation results and runs mutmut analysis.
+Runs mutation testing (mutmut) on experiment results generated on Windows,
+where fork() is unavailable. Must be executed in WSL/Linux.
 
-The script:
-    - Verifies execution on Linux/WSL (required for fork support)
-    - Locates the mutants directory in the repository
-    - VALIDATES existing results (killed > 0 OR survived > 0 means valid)
-    - Re-runs mutation testing for invalid results
-    - Parses results and updates analysis files
-    - Generates updated summary reports
-
-Usage:
-    # From WSL (not Windows):
+Usage (from WSL):
     cd /mnt/c/Users/.../LLM-analysis/automation
-
-    # Process all experiments, skipping those with valid results
-    python3 run_mutmut_backfill.py --results-dir cli_results
-
-    # Only fix experiments with invalid results (no_test_results, no_mutants)
-    python3 run_mutmut_backfill.py --results-dir cli_results --fix-invalid
-
-    # Force re-run for all experiments
-    python3 run_mutmut_backfill.py --results-dir cli_results --force
-
-    # Process specific run
-    python3 run_mutmut_backfill.py --results-dir cli_results --run-id 001
+    python3 -m cli_automation.run_mutmut_backfill --results-dir cli_results
+    python3 -m cli_automation.run_mutmut_backfill --results-dir cli_results --fix-invalid
+    python3 -m cli_automation.run_mutmut_backfill --results-dir cli_results --force
+    python3 -m cli_automation.run_mutmut_backfill --results-dir cli_results --run-id 001
 """
 
 import sys
@@ -48,39 +30,16 @@ logger = logging.getLogger(__name__)
 
 
 def check_platform():
-    """
-    Verify that the script is running on Linux/WSL.
-
-    Mutation testing requires fork() support which is not available on Windows.
-    This function ensures the script is executed in an appropriate environment.
-
-    Raises:
-        SystemExit: If running on Windows
-    """
+    """Exit if running on Windows (mutmut requires fork())."""
     import platform
     if platform.system() == 'Windows':
-        logger.error(
-            "This script must be run in WSL/Linux "
-            "(mutation testing requires fork support)"
-        )
-        logger.error(
-            "Open WSL and run: "
-            "cd /mnt/c/Users/.../automation && python3 run_mutmut_backfill.py"
-        )
+        logger.error("This script must be run in WSL/Linux (mutmut requires fork support)")
         sys.exit(1)
     logger.info("Running on Linux/WSL")
 
 
 def find_mutants_directory() -> Optional[Path]:
-    """
-    Locate the mutants directory in parent directories.
-
-    Searches up to 3 levels above the current directory for the mutants
-    directory containing mutation testing configuration.
-
-    Returns:
-        Path to mutants directory if found, None otherwise
-    """
+    """Locate the mutants directory in parent directories."""
     current_dir = Path(".")
 
     for i in range(3):
@@ -93,18 +52,10 @@ def find_mutants_directory() -> Optional[Path]:
 
 
 def check_existing_results(experiment_dir: Path) -> Tuple[bool, str]:
-    """
-    Check if experiment has valid mutation results.
-
-    Returns:
-        (is_valid, reason)
-        - (True, "valid") if results exist and are valid (killed > 0 OR survived > 0)
-        - (False, reason) if results are missing or invalid
-    """
+    """Check if experiment has valid mutation results. Returns (is_valid, reason)."""
     analysis_file = experiment_dir / "analysis_results.json"
     mutmut_results_file = experiment_dir / "mutmut_results.txt"
 
-    # Check if files exist
     if not analysis_file.exists():
         return False, "no_analysis_file"
 
@@ -114,7 +65,6 @@ def check_existing_results(experiment_dir: Path) -> Tuple[bool, str]:
     if mutmut_results_file.stat().st_size == 0:
         return False, "empty_results_file"
 
-    # Check analysis_results.json for valid mutation data
     try:
         with open(analysis_file, 'r') as f:
             analysis = json.load(f)
@@ -124,13 +74,12 @@ def check_existing_results(experiment_dir: Path) -> Tuple[bool, str]:
         killed = mutation.get('killed', 0)
         survived = mutation.get('survived', 0)
 
-        # Valid if: has mutants AND (killed > 0 OR survived > 0)
         if total_mutants > 0 and (killed > 0 or survived > 0):
             return True, "valid"
         elif total_mutants == 0:
             return False, "no_mutants"
         else:
-            return False, "no_test_results"  # Has mutants but killed=0 AND survived=0
+            return False, "no_test_results"
 
     except (json.JSONDecodeError, Exception) as e:
         return False, f"json_error: {e}"
@@ -147,13 +96,11 @@ def run_mutmut_for_experiment(experiment_dir: Path, mutants_dir: Path, force: bo
 
     test_file = experiment_dir / "mutmut_test.py"
     if not test_file.exists():
-        logger.warning(f"No mutmut_test.py found - skipping")
+        logger.warning("No mutmut_test.py found - skipping")
         return False
 
-    # Define mutmut_results_file path
     mutmut_results_file = experiment_dir / "mutmut_results.txt"
 
-    # Check if valid results already exist
     if not force:
         is_valid, reason = check_existing_results(experiment_dir)
         if is_valid:
@@ -161,7 +108,6 @@ def run_mutmut_for_experiment(experiment_dir: Path, mutants_dir: Path, force: bo
             return False
         elif reason in ["no_test_results", "no_mutants"]:
             logger.info(f"Invalid results found ({reason}) - will re-run mutmut")
-            # Delete invalid results so we re-run
             if mutmut_results_file.exists():
                 mutmut_results_file.unlink()
                 logger.info(f"Deleted invalid results file")
@@ -169,7 +115,7 @@ def run_mutmut_for_experiment(experiment_dir: Path, mutants_dir: Path, force: bo
             logger.info(f"No valid results ({reason}) - will run mutmut")
 
     try:
-        test_content = test_file.read_text()  # mutmut_test.py is already filtered by experiment_runner
+        test_content = test_file.read_text()
 
         if 'from order_calculator import' in test_content or 'import order_calculator' in test_content:
             import_fix = """import sys
@@ -195,43 +141,37 @@ sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
         logger.info(f"Copied test to {test_dst} (fixed imports for src-layout)")
 
         logger.info("Cleaning mutmut cache and temp files...")
-        # Remove .mutmut-cache files
         for cache_file in mutants_dir.glob(".mutmut-cache*"):
             try:
                 cache_file.unlink()
-            except:
+            except Exception:
                 pass
 
-        # Remove meta files
         for meta_file in mutants_dir.rglob("*.meta"):
             try:
                 meta_file.unlink()
-            except:
+            except Exception:
                 pass
 
-        # Remove pyproject.toml (conflicts with setup.cfg in mutmut 3.x)
         pyproject_file = mutants_dir / "pyproject.toml"
         if pyproject_file.exists():
             try:
                 pyproject_file.unlink()
-                logger.info("Removed pyproject.toml (conflicts with setup.cfg)")
-            except:
+            except Exception:
                 pass
 
-        # Remove .coverage file
         coverage_file = mutants_dir / ".coverage"
         if coverage_file.exists():
             try:
                 coverage_file.unlink()
-            except:
+            except Exception:
                 pass
 
-        # Remove mutants directory (mutmut output cache)
         mutants_output_dir = mutants_dir / "mutants"
         if mutants_output_dir.exists():
             try:
                 shutil.rmtree(mutants_output_dir)
-            except:
+            except Exception:
                 pass
 
         logger.info("Running mutmut... (this may take 5-10 minutes)")
@@ -279,9 +219,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
 
         regenerate_markdown_summary(experiment_dir)
 
-        logger.info(f"Mutation testing completed successfully!")
-        logger.info(f"   Mutation score: {stats['mutation_score']}%")
-        logger.info(f"   Killed: {stats['killed']}/{stats['total_mutants']}")
+        logger.info("Mutation testing completed")
+        logger.info(f"  Mutation score: {stats['mutation_score']}%")
+        logger.info(f"  Killed: {stats['killed']}/{stats['total_mutants']}")
 
         return True
 
@@ -360,17 +300,7 @@ def parse_mutmut_results(mutmut_output: str) -> dict:
         'mutation_score': 0.0
     }
 
-    # Look for emoji pattern, allowing any character before the numbers
-    # Pattern explanation:
-    # .*? - any characters (spinner)
-    # (\d+)/(\d+) - progress like "205/205"
-    # \s+ - whitespace
-    # 🎉\s+(\d+) - killed count
-    # 🫥\s+(\d+) - (unknown, usually 0)
-    # ⏰\s+(\d+) - timeout
-    # 🤔\s+(\d+) - suspicious
-    # 🙁\s+(\d+) - survived
-    # 🔇\s+(\d+) - skipped
+    # Mutmut progress line: 205/205  🎉 X  🫥 X  ⏰ X  🤔 X  🙁 X  🔇 X
     emoji_pattern = r'(\d+)/(\d+)\s+🎉\s+(\d+)\s+🫥\s+(\d+)\s+⏰\s+(\d+)\s+🤔\s+(\d+)\s+🙁\s+(\d+)\s+🔇\s+(\d+)'
 
     all_matches = list(re.finditer(emoji_pattern, mutmut_output))
@@ -560,7 +490,6 @@ def process_results_directory(results_dir: Path, run_id_filter: str = None, forc
             if f"run_{run_id_filter}" not in str(exp_dir):
                 continue
 
-        # If fix_invalid mode, only include experiments with invalid results
         if fix_invalid:
             is_valid, reason = check_existing_results(exp_dir)
             if is_valid:

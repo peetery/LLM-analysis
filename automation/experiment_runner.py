@@ -1,13 +1,9 @@
 """
 Experiment Runner for LLM Test Generation Analysis.
 
-This module provides the analysis pipeline for evaluating LLM-generated unit tests.
-It handles test extraction, compilation, coverage analysis, mutation testing,
+Provides the analysis pipeline for evaluating LLM-generated unit tests:
+test extraction, compilation, coverage analysis, mutation testing,
 and quality metrics calculation.
-
-Supports two modes:
-    - Legacy mode: Hardcoded for OrderCalculator class
-    - Universal mode: Uses ClassContextExtractor for any Python class
 """
 
 import json
@@ -29,15 +25,8 @@ logger = logging.getLogger(__name__)
 
 
 class ExperimentRunner:
-    """
-    Runs analysis pipeline on LLM-generated tests.
+    """Runs analysis pipeline on LLM-generated tests."""
 
-    Supports two modes:
-    - Legacy mode (extractor=None): Uses hardcoded OrderCalculator references
-    - Universal mode (extractor provided): Uses class info from extractor
-    """
-
-    # Legacy mode defaults (OrderCalculator)
     LEGACY_CLASS_NAME = "OrderCalculator"
     LEGACY_MODULE_NAME = "order_calculator"
     LEGACY_HELPER_TYPES = ["Item"]
@@ -50,18 +39,11 @@ class ExperimentRunner:
 
     def __init__(self, base_results_dir="prompts_results",
                  extractor: Optional['ClassContextExtractor'] = None):
-        """
-        Initialize the experiment runner.
-
-        Args:
-            base_results_dir: Base directory for results (legacy mode path resolution)
-            extractor: ClassContextExtractor instance for universal mode
-        """
+        """Initialize the experiment runner."""
         self.base_results_dir = Path(base_results_dir)
         self.current_experiment = None
         self.extractor = extractor
 
-        # Set class info based on mode
         if extractor is not None:
             info = extractor.get_class_info()
             self.class_name = info.name
@@ -70,42 +52,40 @@ class ExperimentRunner:
             self.source_file = info.file_path
             self.import_statement = info.import_statement
             self.known_methods = info.public_methods
-            logger.info(f"Universal mode: analyzing tests for {self.class_name}")
+            logger.info("Universal mode: analyzing tests for %s", self.class_name)
         else:
             self.class_name = self.LEGACY_CLASS_NAME
             self.module_name = self.LEGACY_MODULE_NAME
             self.helper_types = self.LEGACY_HELPER_TYPES
-            self.source_file = None  # Will be resolved dynamically
+            self.source_file = None
             self.import_statement = f"from {self.LEGACY_MODULE_NAME} import {self.LEGACY_CLASS_NAME}, Item"
             self.known_methods = self.LEGACY_METHODS
             logger.info("Legacy mode: using OrderCalculator defaults")
-    
+
     def save_experiment_results(self, result_dir, strategy_result, model_name, strategy_name, context_type):
+        """Save experiment results and run initial test extraction."""
         timestamp = datetime.now().isoformat()
 
         if strategy_name == "simple_prompting":
             test_code = self.extract_test_code(strategy_result['response'])
             response_time = strategy_result['response_time']
-        else:  # chain_of_thought_prompting
+        else:
             response_text = strategy_result.get('final_response') or strategy_result.get('response', '')
             test_code = self.extract_test_code(response_text)
             response_time = strategy_result.get('total_response_time', 0)
-        
+
         if not test_code:
             logger.error("Failed to extract test code from response")
             return None
-        
+
         tests_file = result_dir / "tests.py"
         tests_file.write_text(test_code)
 
-        # Copy source file to test directory
         if self.source_file is not None and self.source_file.exists():
-            # Universal mode - use extractor's source file
             dest_file = result_dir / f"{self.module_name}.py"
             shutil.copy2(self.source_file, dest_file)
-            logger.info(f"✓ Copied {self.source_file} to test directory")
+            logger.info("Copied %s to test directory", self.source_file)
         else:
-            # Legacy mode - search for order_calculator.py
             source_file = Path(f"../{self.module_name}.py")
             if not source_file.exists():
                 source_file = Path(f"../../{self.module_name}.py")
@@ -115,13 +95,13 @@ class ExperimentRunner:
             if source_file.exists():
                 dest_file = result_dir / f"{self.module_name}.py"
                 shutil.copy2(source_file, dest_file)
-                logger.info(f"✓ Copied {source_file} to test directory")
+                logger.info("Copied %s to test directory", source_file)
             else:
-                logger.error(f"✗ {self.module_name}.py not found - tests will fail")
+                logger.error("%s.py not found - tests will fail", self.module_name)
 
         mutmut_test_file = result_dir / "mutmut_test.py"
         self.create_filtered_test_file(tests_file, mutmut_test_file)
-        
+
         experiment_data = {
             'model': model_name,
             'strategy': strategy_name,
@@ -131,15 +111,16 @@ class ExperimentRunner:
             'test_file': str(tests_file),
             'raw_results': strategy_result
         }
-        
+
         results_file = result_dir / "experiment_results.json"
         with open(results_file, 'w', encoding='utf-8') as f:
             json.dump(experiment_data, f, indent=2, ensure_ascii=False)
-        
-        logger.info(f"Results saved to {result_dir}")
+
+        logger.info("Results saved to %s", result_dir)
         return experiment_data
 
     def create_filtered_test_file(self, source_test_file, target_test_file):
+        """Create a test file with only passing tests for mutation testing."""
         try:
             result = subprocess.run(
                 ['python', '-m', 'unittest', source_test_file.stem, '-v'],
@@ -154,14 +135,11 @@ class ExperimentRunner:
             current_test = None
 
             for line in result.stderr.split('\n'):
-                # Check if this line contains a test name (format: test_xxx (module.class.test_xxx))
                 test_name_match = re.search(r'^(test_\w+)\s+\(', line)
                 if test_name_match:
                     current_test = test_name_match.group(1)
 
-                # Check for test result on this line or use current_test from previous line
                 if ' ... ok' in line:
-                    # Try to find test name on same line first (no docstring case)
                     match = re.search(r'(test_\w+)', line)
                     if match:
                         passing_tests.add(match.group(1))
@@ -176,16 +154,15 @@ class ExperimentRunner:
                         failing_tests.add(current_test)
                         current_test = None
 
-            logger.info(f"📊 Test filtering: {len(passing_tests)} passing, {len(failing_tests)} failing")
+            logger.info("Test filtering: %d passing, %d failing", len(passing_tests), len(failing_tests))
 
             if not passing_tests:
-                logger.warning("⚠️  No passing tests found - copying original file for mutmut")
+                logger.warning("No passing tests found - copying original file for mutmut")
                 shutil.copy2(source_test_file, target_test_file)
                 return
 
             test_content = source_test_file.read_text()
             tree = ast.parse(test_content)
-
             filtered_tree = ast.parse("")
 
             for node in tree.body:
@@ -215,29 +192,29 @@ class ExperimentRunner:
             try:
                 filtered_code = ast.unparse(filtered_tree)
             except AttributeError:
-                logger.warning("⚠️  ast.unparse not available - using line-based filtering")
+                logger.warning("ast.unparse not available - using line-based filtering")
                 filtered_code = self._filter_tests_line_based(test_content, failing_tests)
 
             target_test_file.write_text(filtered_code)
-            logger.info(f"✅ Created filtered test file: {target_test_file}")
-            logger.info(f"   Removed {len(failing_tests)} failing tests for mutation testing")
+            logger.info("Created filtered test file: %s (removed %d failing tests)",
+                        target_test_file, len(failing_tests))
 
         except Exception as e:
-            logger.error(f"Test filtering failed: {e} - copying original file")
+            logger.error("Test filtering failed: %s - copying original file", e)
             shutil.copy2(source_test_file, target_test_file)
 
     def _filter_tests_line_based(self, test_content, failing_tests):
+        """Line-based fallback for filtering failing tests."""
         lines = test_content.split('\n')
         filtered_lines = []
         skip_until_next_method = False
         current_indent = 0
 
-        for i, line in enumerate(lines):
+        for line in lines:
             stripped = line.strip()
 
             if stripped.startswith('def test_'):
                 method_name = stripped.split('(')[0].replace('def ', '')
-
                 if method_name in failing_tests:
                     skip_until_next_method = True
                     current_indent = len(line) - len(line.lstrip())
@@ -256,8 +233,8 @@ class ExperimentRunner:
         return '\n'.join(filtered_lines)
 
     def extract_test_code(self, response_text):
-        logger.info(f"Extracting test code from response ({len(response_text)} chars)")
-        logger.debug(f"First 300 chars: {response_text[:300]}")
+        """Extract test code from LLM response text."""
+        logger.info("Extracting test code from response (%d chars)", len(response_text))
 
         def clean_code_block(code):
             lines = code.split('\n')
@@ -275,10 +252,8 @@ class ExperimentRunner:
 
                 if line_stripped.lower() in ui_artifacts:
                     continue
-
                 if line_stripped.startswith('```'):
                     continue
-
                 if not cleaned_lines and not line_stripped:
                     continue
 
@@ -294,27 +269,25 @@ class ExperimentRunner:
             code_blocks = re.findall(r'```\n(.*?)\n```', response_text, re.DOTALL)
 
         if code_blocks:
-            logger.info(f"✓ Found {len(code_blocks)} code blocks")
+            logger.info("Found %d code blocks", len(code_blocks))
 
             for i, block in enumerate(code_blocks):
                 cleaned_block = clean_code_block(block)
                 smart_result = self._extract_tests_smart(cleaned_block)
-
                 if smart_result:
-                    logger.info(f"✓ Smart extraction successful from block {i+1}")
-                    logger.info(f"✓ Extracted {len(smart_result)} chars of test code")
+                    logger.info("Smart extraction successful from block %d (%d chars)", i+1, len(smart_result))
                     return smart_result
 
             for block in code_blocks:
                 cleaned_block = clean_code_block(block)
                 if 'unittest' in cleaned_block or 'def test' in cleaned_block:
-                    logger.warning("⚠️ Smart extraction failed, using fallback")
+                    logger.warning("Smart extraction failed, using fallback")
                     return self._ensure_imports(cleaned_block)
 
-            logger.warning("⚠️ No unittest found, using first block")
+            logger.warning("No unittest found, using first block")
             return self._ensure_imports(clean_code_block(code_blocks[0]))
 
-        logger.warning("No markdown code blocks found, trying fallback extraction...")
+        logger.warning("No markdown code blocks found, trying fallback extraction")
         lines = response_text.split('\n')
         code_start = None
 
@@ -327,28 +300,26 @@ class ExperimentRunner:
                 break
 
         if code_start is not None:
-            logger.info(f"✓ Found code start at line {code_start} (fallback method)")
+            logger.info("Found code start at line %d (fallback method)", code_start)
             code_lines = lines[code_start:]
             code = '\n'.join(code_lines)
             extracted = clean_code_block(code)
-            logger.info(f"✓ Extracted {len(extracted)} chars of test code (fallback)")
             return self._ensure_imports(extracted)
 
-        logger.error("✗ Failed to extract any test code from response")
+        logger.error("Failed to extract any test code from response")
         return None
 
     def _extract_tests_smart(self, code_text):
+        """Extract test classes from code using AST parsing."""
         try:
             tree = ast.parse(code_text)
         except SyntaxError:
-            logger.debug("Code is not valid Python, skipping smart extraction")
             return None
 
         imports = []
         test_classes = []
         has_source_import = False
 
-        # Build list of classes to exclude (main class + helper types)
         classes_to_exclude = [self.class_name] + list(self.helper_types)
 
         for node in tree.body:
@@ -367,15 +338,12 @@ class ExperimentRunner:
             elif isinstance(node, ast.ClassDef):
                 if node.name.startswith('Test'):
                     test_classes.append(node)
-                    logger.debug(f"Found test class: {node.name}")
                 elif node.name in classes_to_exclude:
-                    logger.warning(f"⚠️  Detected copied implementation class '{node.name}' in test code - removing it")
-                    logger.warning(f"   (Model should import from {self.module_name}, not redefine the class)")
+                    logger.warning("Detected copied implementation class '%s' in test code - removing it", node.name)
                 else:
                     test_classes.append(node)
 
         if not test_classes:
-            logger.debug("No test classes found in this block")
             return None
 
         new_tree = ast.Module(body=imports + test_classes, type_ignores=[])
@@ -383,21 +351,16 @@ class ExperimentRunner:
         try:
             code = ast.unparse(new_tree)
         except AttributeError:
-            logger.warning("ast.unparse not available, using fallback")
             return None
 
         if not has_source_import:
-            logger.info(f"✓ Auto-adding missing {self.class_name} import")
+            logger.info("Auto-adding missing %s import", self.class_name)
             code = self.import_statement + "\n\n" + code
 
         return code
 
     def _remove_copied_implementation_classes(self, code_text):
-        """
-        Remove any copied implementation class definitions from the test code.
-        This prevents the model's copied class from shadowing the actual module import.
-        """
-        # Build list of classes to exclude
+        """Remove copied implementation class definitions from test code."""
         classes_to_exclude = [self.class_name] + list(self.helper_types)
 
         try:
@@ -411,9 +374,8 @@ class ExperimentRunner:
             if not classes_to_remove:
                 return code_text
 
-            logger.warning(f"⚠️  Removing copied implementation class(es): {', '.join(classes_to_remove)}")
+            logger.warning("Removing copied implementation class(es): %s", ', '.join(classes_to_remove))
 
-            # Rebuild AST without the copied classes
             new_body = [node for node in tree.body
                        if not (isinstance(node, ast.ClassDef) and node.name in classes_to_exclude)]
             new_tree = ast.Module(body=new_body, type_ignores=[])
@@ -421,11 +383,9 @@ class ExperimentRunner:
             try:
                 return ast.unparse(new_tree)
             except AttributeError:
-                # Python < 3.9 fallback: use line-based removal
                 return self._remove_classes_line_based(code_text, classes_to_remove)
 
         except SyntaxError:
-            # If code doesn't parse, try line-based removal
             return self._remove_classes_line_based(code_text, classes_to_exclude)
 
     def _remove_classes_line_based(self, code_text, class_names):
@@ -438,16 +398,13 @@ class ExperimentRunner:
         for line in lines:
             stripped = line.strip()
 
-            # Check if this is a class definition we want to remove
             for class_name in class_names:
                 if stripped.startswith(f'class {class_name}') and ('(' in stripped or ':' in stripped):
                     skip_class = True
                     class_indent = len(line) - len(line.lstrip())
-                    logger.warning(f"⚠️  Removing class definition: {class_name}")
                     break
 
             if skip_class:
-                # Check if we've exited the class (same or lower indentation, non-empty)
                 if stripped and not stripped.startswith('#'):
                     current_indent = len(line) - len(line.lstrip())
                     if current_indent <= class_indent and not stripped.startswith('class '):
@@ -459,17 +416,16 @@ class ExperimentRunner:
         return '\n'.join(filtered_lines)
 
     def _ensure_imports(self, code_text):
-        # First, remove any copied implementation classes
+        """Ensure the source module import is present in test code."""
         code_text = self._remove_copied_implementation_classes(code_text)
 
-        # Check for existing import of the source module
         has_import = (
             re.search(rf'from\s+{re.escape(self.module_name)}\s+import.*{re.escape(self.class_name)}', code_text) or
             re.search(rf'import\s+{re.escape(self.module_name)}', code_text)
         )
 
         if not has_import:
-            logger.info(f"✓ Auto-adding missing {self.class_name} import (fallback)")
+            logger.info("Auto-adding missing %s import (fallback)", self.class_name)
             lines = code_text.split('\n')
 
             last_import_idx = -1
@@ -486,19 +442,20 @@ class ExperimentRunner:
             code_text = '\n'.join(lines)
 
         return code_text
-    
+
     def run_analysis(self, result_dir, experiment_data):
+        """Run complete analysis pipeline on generated tests."""
         tests_file = Path(experiment_data['test_file'])
-        
+
         if not tests_file.exists():
-            logger.error(f"Test file not found: {tests_file}")
+            logger.error("Test file not found: %s", tests_file)
             return None
-        
+
         analysis_results = {}
-        
+
         compilation_result = self.test_compilation_and_execution(tests_file)
         analysis_results['compilation'] = compilation_result
-        
+
         if not compilation_result['compilation_success']:
             logger.error("Tests do not compile")
 
@@ -507,45 +464,25 @@ class ExperimentRunner:
             analysis_results['coverage'] = coverage_results
         else:
             analysis_results['coverage'] = None
-        
+
         if compilation_result['compilation_success']:
             mutation_results = self.run_mutation_testing(result_dir)
             analysis_results['mutation'] = mutation_results
         else:
             analysis_results['mutation'] = None
-        
+
         scenario_analysis = self.analyze_test_scenarios(tests_file)
         analysis_results['scenarios'] = scenario_analysis
-        
+
         summary = self.generate_comprehensive_summary(analysis_results, experiment_data)
         analysis_results['summary'] = summary
-        
+
         self.save_analysis_results(result_dir, analysis_results, experiment_data)
-        
+
         return analysis_results
-    
-    def test_compilation(self, tests_file):
-        try:
-            result = subprocess.run(
-                ['python', '-m', 'py_compile', tests_file.name],
-                cwd=tests_file.parent,
-                capture_output=True,
-                text=True,
-                timeout=30
-            )
-            
-            if result.returncode == 0:
-                logger.info("✓ Tests compile successfully")
-                return True
-            else:
-                logger.error(f"✗ Compilation failed: {result.stderr}")
-                return False
-                
-        except Exception as e:
-            logger.error(f"Compilation test failed: {e}")
-            return False
-    
+
     def run_coverage_analysis(self, result_dir, tests_file):
+        """Run coverage.py analysis on the test suite."""
         try:
             cmd = [
                 'python', '-m', 'coverage', 'run',
@@ -554,47 +491,40 @@ class ExperimentRunner:
             ]
 
             result = subprocess.run(
-                cmd,
-                cwd=result_dir,
-                capture_output=True,
-                text=True,
-                timeout=120
+                cmd, cwd=result_dir, capture_output=True, text=True, timeout=120
             )
 
             if result.returncode != 0:
-                logger.warning(f"⚠️  Some tests failed during coverage run, but continuing with coverage analysis")
-                logger.debug(f"Test output: {result.stderr[:500]}")
+                logger.warning("Some tests failed during coverage run, continuing with analysis")
 
             report_result = subprocess.run(
                 ['python', '-m', 'coverage', 'report'],
-                cwd=result_dir,
-                capture_output=True,
-                text=True
+                cwd=result_dir, capture_output=True, text=True
             )
 
             if report_result.returncode != 0:
-                logger.error(f"Coverage report generation failed: {report_result.stderr}")
+                logger.error("Coverage report generation failed: %s", report_result.stderr)
                 return None
 
             subprocess.run(
                 ['python', '-m', 'coverage', 'html'],
-                cwd=result_dir,
-                capture_output=True,
-                text=True
+                cwd=result_dir, capture_output=True, text=True
             )
 
             coverage_data = self.parse_coverage_report(report_result.stdout)
 
             if coverage_data:
-                logger.info(f"✓ Coverage: {coverage_data['coverage_percent']}% statement, {coverage_data['branch_coverage_percent']}% branch")
+                logger.info("Coverage: %d%% statement, %d%% branch",
+                            coverage_data['coverage_percent'], coverage_data['branch_coverage_percent'])
 
             return coverage_data
 
         except Exception as e:
-            logger.error(f"Coverage analysis failed: {e}")
+            logger.error("Coverage analysis failed: %s", e)
             return None
-    
+
     def parse_coverage_report(self, coverage_output):
+        """Parse coverage.py report output."""
         lines = coverage_output.strip().split('\n')
         coverage_data = {
             'statements': 0,
@@ -604,7 +534,6 @@ class ExperimentRunner:
             'partial_coverage': 0
         }
 
-        # Look for the source module in coverage output
         source_file_pattern = f'{self.module_name}.py'
 
         for line in lines:
@@ -623,24 +552,19 @@ class ExperimentRunner:
                             coverage_data['branch_coverage_percent'] = round((branch_covered / branch_total) * 100)
 
                     except (ValueError, IndexError) as e:
-                        logger.warning(f"Failed to parse coverage line: {line}, error: {e}")
-                        pass
+                        logger.warning("Failed to parse coverage line: %s, error: %s", line, e)
 
         return coverage_data if coverage_data['statements'] > 0 else None
-    
+
     def run_mutation_testing(self, result_dir):
+        """Run mutmut mutation testing on the test suite."""
         import platform
 
         if platform.system() == 'Windows':
-            logger.warning("⚠️  Mutation testing requires Linux/WSL - skipping on Windows")
-            logger.info("💡 Run 'python run_mutmut_backfill.py' in WSL to add mutation results later")
+            logger.warning("Mutation testing requires Linux/WSL - skipping on Windows")
             return {
-                'total_mutants': 0,
-                'killed': 0,
-                'survived': 0,
-                'timeout': 0,
-                'mutation_score': 0.0,
-                'status': 'skipped_windows'
+                'total_mutants': 0, 'killed': 0, 'survived': 0,
+                'timeout': 0, 'mutation_score': 0.0, 'status': 'skipped_windows'
             }
 
         try:
@@ -656,105 +580,86 @@ class ExperimentRunner:
             if not mutants_dir:
                 logger.warning("Mutants directory not found - skipping mutation testing")
                 return {
-                    'total_mutants': 0,
-                    'killed': 0,
-                    'survived': 0,
-                    'timeout': 0,
-                    'mutation_score': 0.0,
-                    'status': 'skipped_no_dir'
+                    'total_mutants': 0, 'killed': 0, 'survived': 0,
+                    'timeout': 0, 'mutation_score': 0.0, 'status': 'skipped_no_dir'
                 }
-            
+
             test_src = result_dir / "mutmut_test.py"
             test_dst = mutants_dir / "tests" / "mutmut_test.py"
-            
             test_dst.parent.mkdir(exist_ok=True)
             shutil.copy2(test_src, test_dst)
-            
+
             result = subprocess.run(
                 ['python', '-m', 'mutmut', 'run'],
-                cwd=mutants_dir,
-                capture_output=True,
-                text=True,
-                timeout=600
+                cwd=mutants_dir, capture_output=True, text=True, timeout=600
             )
-            
+
             results_result = subprocess.run(
                 ['python', '-m', 'mutmut', 'results'],
-                cwd=mutants_dir,
-                capture_output=True,
-                text=True
+                cwd=mutants_dir, capture_output=True, text=True
             )
-            
+
             mutmut_results_file = result_dir / "mutmut_results.txt"
             mutmut_results_file.write_text(results_result.stdout)
-            
+
             stats = self.parse_mutmut_results(results_result.stdout)
-            
+
             stats_file = result_dir / "mutmut-stats.json"
             with open(stats_file, 'w') as f:
                 json.dump(stats, f, indent=2)
-            
+
             return stats
-            
+
         except Exception as e:
-            logger.error(f"Mutation testing failed: {e}")
+            logger.error("Mutation testing failed: %s", e)
             return None
-    
+
     def parse_mutmut_results(self, mutmut_output):
+        """Parse mutmut results output."""
         stats = {
-            'total_mutants': 0,
-            'killed': 0,
-            'survived': 0,
-            'timeout': 0,
-            'suspicious': 0,
-            'skipped': 0,
-            'mutation_score': 0.0
+            'total_mutants': 0, 'killed': 0, 'survived': 0,
+            'timeout': 0, 'suspicious': 0, 'skipped': 0, 'mutation_score': 0.0
         }
-        
+
         emoji_pattern = r'(\d+)/(\d+)\s+🎉\s+(\d+)\s+🫥\s+(\d+)\s+⏰\s+(\d+)\s+🤔\s+(\d+)\s+🙁\s+(\d+)\s+🔇\s+(\d+)'
         match = re.search(emoji_pattern, mutmut_output)
-        
+
         if match:
-            progress_current = int(match.group(1))
             progress_total = int(match.group(2))
             killed = int(match.group(3))
             timeout = int(match.group(4))
             suspicious = int(match.group(6))
             survived = int(match.group(7))
             skipped = int(match.group(8))
-            
+
             stats.update({
-                'total_mutants': progress_total,
-                'killed': killed,
-                'survived': survived,
-                'timeout': timeout,
-                'suspicious': suspicious,
-                'skipped': skipped
+                'total_mutants': progress_total, 'killed': killed,
+                'survived': survived, 'timeout': timeout,
+                'suspicious': suspicious, 'skipped': skipped
             })
-            
+
             if progress_total > 0:
                 stats['mutation_score'] = round((killed / progress_total) * 100, 1)
-        
+
         if stats['total_mutants'] == 0:
             for line in mutmut_output.split('\n'):
                 if 'Total:' in line:
                     total_match = re.search(r'Total:\s*(\d+)', line)
                     if total_match:
                         stats['total_mutants'] = int(total_match.group(1))
-                        
                 if 'killed:' in line:
                     killed_match = re.search(r'killed:\s*(\d+)', line)
                     if killed_match:
                         stats['killed'] = int(killed_match.group(1))
-                        
                 if 'survived:' in line:
                     survived_match = re.search(r'survived:\s*(\d+)', line)
                     if survived_match:
                         stats['survived'] = int(survived_match.group(1))
-        
+
         return stats
-    
+
     def test_compilation_and_execution(self, tests_file):
+        """Test compilation and execution of generated tests."""
         result = {
             'compilation_success': False,
             'execution_success': False,
@@ -764,43 +669,37 @@ class ExperimentRunner:
             'test_errors': [],
             'compilation_errors': []
         }
-        
+
         try:
             compile_result = subprocess.run(
                 ['python', '-m', 'py_compile', tests_file.name],
-                cwd=tests_file.parent,
-                capture_output=True,
-                text=True,
-                timeout=30
+                cwd=tests_file.parent, capture_output=True, text=True, timeout=30
             )
-            
+
             if compile_result.returncode == 0:
                 result['compilation_success'] = True
-                logger.info("✓ Tests compile successfully")
-                
+                logger.info("Tests compile successfully")
+
                 unittest_result = subprocess.run(
                     ['python', '-m', 'unittest', tests_file.stem, '-v'],
-                    cwd=tests_file.parent,
-                    capture_output=True,
-                    text=True,
-                    timeout=120
+                    cwd=tests_file.parent, capture_output=True, text=True, timeout=120
                 )
-                
+
                 self.parse_unittest_results(unittest_result.stderr, result)
-                
             else:
                 result['compilation_errors'] = [compile_result.stderr]
-                logger.error(f"✗ Compilation failed: {compile_result.stderr}")
-                
+                logger.error("Compilation failed: %s", compile_result.stderr)
+
         except Exception as e:
-            logger.error(f"Compilation/execution test failed: {e}")
+            logger.error("Compilation/execution test failed: %s", e)
             result['compilation_errors'] = [str(e)]
-            
+
         return result
-    
+
     def parse_unittest_results(self, unittest_output, result):
+        """Parse unittest verbose output to extract test counts."""
         lines = unittest_output.strip().split('\n')
-        
+
         for line in lines:
             if 'Ran' in line and 'test' in line:
                 parts = line.split()
@@ -815,13 +714,13 @@ class ExperimentRunner:
                 result['tests_failed'] = 0
             elif 'FAILED' in line:
                 result['execution_success'] = False
-                # Przykład: "FAILED (failures=3, errors=2)"
                 failures = self.extract_number_from_text(line, 'failures=')
                 errors = self.extract_number_from_text(line, 'errors=')
                 result['tests_failed'] = failures + errors
                 result['tests_passed'] = result['tests_run'] - result['tests_failed']
-                
+
     def extract_number_from_text(self, text, prefix):
+        """Extract integer after a prefix string."""
         try:
             start = text.find(prefix)
             if start == -1:
@@ -831,13 +730,13 @@ class ExperimentRunner:
             while end < len(text) and text[end].isdigit():
                 end += 1
             return int(text[start:end]) if end > start else 0
-        except:
+        except Exception:
             return 0
-    
+
     def analyze_test_scenarios(self, tests_file):
+        """Analyze test file for quality metrics."""
         test_content = tests_file.read_text()
         test_methods = test_content.count('def test_')
-        quality_metrics = self.analyze_test_quality(test_content)
         tested_methods = self.detect_tested_methods(test_content)
         duplicates = self.detect_duplicate_tests(tests_file)
         assertion_quality = self.analyze_assertion_quality(tests_file)
@@ -848,7 +747,6 @@ class ExperimentRunner:
 
         return {
             'total_test_methods': test_methods,
-            'quality_metrics': quality_metrics,
             'tested_methods': tested_methods,
             'duplicates': duplicates,
             'assertion_quality': assertion_quality,
@@ -857,15 +755,14 @@ class ExperimentRunner:
             'naming_quality': naming_quality,
             'code_smells': code_smells
         }
-    
-    def detect_tested_methods(self, test_content):
-        # Use dynamic method list from extractor or legacy defaults
-        known_methods = self.known_methods
 
+    def detect_tested_methods(self, test_content):
+        """Detect which methods of the source class are tested."""
+        known_methods = self.known_methods
         tested_methods = {}
+
         for method in known_methods:
             if method == '__init__':
-                # Match class instantiation
                 pattern = rf'{re.escape(self.class_name)}\s*\('
             else:
                 pattern = rf'\.{re.escape(method)}\s*\('
@@ -883,72 +780,42 @@ class ExperimentRunner:
         }
 
     def detect_duplicate_tests(self, tests_file):
-        """
-        Detect duplicate tests using text-based similarity on test body.
-
-        Uses difflib.SequenceMatcher to compare normalized test bodies.
-        Threshold: 99.5% similarity for true duplicates (copy-paste with minor changes).
-
-        Returns:
-            - total_tests_analyzed: number of test methods found
-            - duplicate_pairs_found: number of pairs with >=99.5% similarity
-            - unique_duplicate_tests: count of unique tests involved in duplicates
-            - duplicates: list of duplicate pairs (max 10)
-        """
+        """Detect duplicate tests using text similarity (99.5% threshold)."""
         try:
             test_content = tests_file.read_text()
             tree = ast.parse(test_content)
             lines = test_content.split('\n')
 
-            # Extract test functions with their source code
             test_functions = []
             for node in ast.walk(tree):
                 if isinstance(node, ast.FunctionDef) and node.name.startswith('test_'):
-                    # Get source code of the function body (excluding def line)
-                    start_line = node.lineno  # 1-indexed, this is the def line
-                    end_line = node.end_lineno
-
-                    # Extract body lines (skip the def line)
-                    body_lines = lines[start_line:end_line]  # start_line is 1-indexed, so this skips def
-
-                    # Normalize: strip whitespace, join non-empty lines
+                    body_lines = lines[node.lineno:node.end_lineno]
                     normalized_body = '\n'.join(
                         line.strip() for line in body_lines if line.strip()
                     )
-
                     test_functions.append({
-                        'name': node.name,
-                        'line': node.lineno,
-                        'body': normalized_body
+                        'name': node.name, 'line': node.lineno, 'body': normalized_body
                     })
 
-            # Find duplicates using text similarity on normalized body
             duplicates = []
-            duplicate_tests = set()  # Track unique tests that are duplicates
+            duplicate_tests = set()
 
             for i, test1 in enumerate(test_functions):
                 for test2 in test_functions[i+1:]:
-                    # Skip if bodies are too different in length (optimization)
                     len1, len2 = len(test1['body']), len(test2['body'])
                     if len1 == 0 or len2 == 0:
                         continue
                     if min(len1, len2) / max(len1, len2) < 0.8:
                         continue
 
-                    # Compare normalized bodies using SequenceMatcher
                     similarity = difflib.SequenceMatcher(
-                        None,
-                        test1['body'],
-                        test2['body']
+                        None, test1['body'], test2['body']
                     ).ratio()
 
-                    # 99.5% threshold for true duplicates (copy-paste only)
                     if similarity >= 0.995:
                         duplicates.append({
-                            'test1': test1['name'],
-                            'test1_line': test1['line'],
-                            'test2': test2['name'],
-                            'test2_line': test2['line'],
+                            'test1': test1['name'], 'test1_line': test1['line'],
+                            'test2': test2['name'], 'test2_line': test2['line'],
                             'similarity': round(similarity * 100, 1)
                         })
                         duplicate_tests.add(test1['name'])
@@ -962,16 +829,14 @@ class ExperimentRunner:
             }
 
         except Exception as e:
-            logger.warning(f"Duplicate detection failed: {e}")
+            logger.warning("Duplicate detection failed: %s", e)
             return {
-                'total_tests_analyzed': 0,
-                'duplicate_pairs_found': 0,
-                'unique_duplicate_tests': 0,
-                'duplicates': [],
-                'error': str(e)
+                'total_tests_analyzed': 0, 'duplicate_pairs_found': 0,
+                'unique_duplicate_tests': 0, 'duplicates': [], 'error': str(e)
             }
 
     def analyze_assertion_quality(self, tests_file):
+        """Analyze quality and types of assertions used."""
         try:
             test_content = tests_file.read_text()
             tree = ast.parse(test_content)
@@ -989,16 +854,12 @@ class ExperimentRunner:
 
                                 if assertion_type in ['assertIsNotNone', 'assertTrue', 'assertFalse', 'assertIsNone']:
                                     weak_assertions.append({
-                                        'test': node.name,
-                                        'line': child.lineno,
-                                        'type': assertion_type
+                                        'test': node.name, 'line': child.lineno, 'type': assertion_type
                                     })
                                 elif assertion_type in ['assertEqual', 'assertAlmostEqual', 'assertGreater',
                                                         'assertLess', 'assertIn', 'assertNotIn']:
                                     strong_assertions.append({
-                                        'test': node.name,
-                                        'line': child.lineno,
-                                        'type': assertion_type
+                                        'test': node.name, 'line': child.lineno, 'type': assertion_type
                                     })
 
                                 if len(child.args) < 3:
@@ -1016,17 +877,15 @@ class ExperimentRunner:
             }
 
         except Exception as e:
-            logger.warning(f"Assertion quality analysis failed: {e}")
+            logger.warning("Assertion quality analysis failed: %s", e)
             return {
-                'total_assertions': 0,
-                'weak_assertions_count': 0,
-                'strong_assertions_count': 0,
-                'weak_assertions': [],
-                'assertions_without_message': 0,
-                'assertion_quality_score': 0
+                'total_assertions': 0, 'weak_assertions_count': 0,
+                'strong_assertions_count': 0, 'weak_assertions': [],
+                'assertions_without_message': 0, 'assertion_quality_score': 0
             }
 
     def analyze_exception_testing_quality(self, tests_file):
+        """Analyze quality of exception testing."""
         try:
             test_content = tests_file.read_text()
             tree = ast.parse(test_content)
@@ -1042,14 +901,10 @@ class ExperimentRunner:
                             if isinstance(child.func, ast.Attribute) and child.func.attr == 'assertRaises':
                                 if child.args:
                                     exc_type = ast.unparse(child.args[0]) if hasattr(ast, 'unparse') else str(child.args[0])
-
                                     if 'Exception' == exc_type:
                                         generic_exception_usage += 1
-
                                     exception_tests.append({
-                                        'test': node.name,
-                                        'line': child.lineno,
-                                        'exception_type': exc_type
+                                        'test': node.name, 'line': child.lineno, 'exception_type': exc_type
                                     })
 
                         if isinstance(child, ast.withitem):
@@ -1065,23 +920,21 @@ class ExperimentRunner:
             }
 
         except Exception as e:
-            logger.warning(f"Exception testing quality analysis failed: {e}")
+            logger.warning("Exception testing quality analysis failed: %s", e)
             return {
-                'exception_tests_count': 0,
-                'tests_with_message_check': 0,
-                'generic_exception_usage': 0,
-                'exception_tests': [],
+                'exception_tests_count': 0, 'tests_with_message_check': 0,
+                'generic_exception_usage': 0, 'exception_tests': [],
                 'exception_quality_score': 0
             }
 
     def analyze_test_independence(self, tests_file):
+        """Analyze whether tests are independent of each other."""
         try:
             test_content = tests_file.read_text()
             tree = ast.parse(test_content)
 
             tests_modifying_self = []
             tests_with_class_variables = []
-            potential_dependencies = []
 
             for node in ast.walk(tree):
                 if isinstance(node, ast.ClassDef):
@@ -1090,8 +943,7 @@ class ExperimentRunner:
                             for test in node.body:
                                 if isinstance(test, ast.FunctionDef) and test.name.startswith('test_'):
                                     tests_with_class_variables.append({
-                                        'test': test.name,
-                                        'line': test.lineno
+                                        'test': test.name, 'line': test.lineno
                                     })
 
                 if isinstance(node, ast.FunctionDef) and node.name.startswith('test_'):
@@ -1101,9 +953,7 @@ class ExperimentRunner:
                                 if isinstance(target, ast.Attribute):
                                     if isinstance(target.value, ast.Name) and target.value.id == 'self':
                                         tests_modifying_self.append({
-                                            'test': node.name,
-                                            'line': child.lineno,
-                                            'attribute': target.attr
+                                            'test': node.name, 'line': child.lineno, 'attribute': target.attr
                                         })
 
             independence_score = 100
@@ -1122,16 +972,14 @@ class ExperimentRunner:
             }
 
         except Exception as e:
-            logger.warning(f"Test independence analysis failed: {e}")
+            logger.warning("Test independence analysis failed: %s", e)
             return {
-                'tests_modifying_self_count': 0,
-                'tests_with_class_variables_count': 0,
-                'tests_modifying_self': [],
-                'independence_score': 100,
-                'is_independent': True
+                'tests_modifying_self_count': 0, 'tests_with_class_variables_count': 0,
+                'tests_modifying_self': [], 'independence_score': 100, 'is_independent': True
             }
 
     def analyze_test_naming_quality(self, tests_file):
+        """Analyze quality of test method names."""
         try:
             test_content = tests_file.read_text()
             tree = ast.parse(test_content)
@@ -1140,13 +988,8 @@ class ExperimentRunner:
             short_names = []
             descriptive_names = []
             naming_patterns = {
-                'should': 0,
-                'when': 0,
-                'given': 0,
-                'test_': 0,
-                'with': 0,
-                'returns': 0,
-                'raises': 0
+                'should': 0, 'when': 0, 'given': 0, 'test_': 0,
+                'with': 0, 'returns': 0, 'raises': 0
             }
 
             action_verbs = ['add', 'remove', 'calculate', 'get', 'set', 'update', 'delete',
@@ -1187,25 +1030,22 @@ class ExperimentRunner:
             }
 
         except Exception as e:
-            logger.warning(f"Test naming quality analysis failed: {e}")
+            logger.warning("Test naming quality analysis failed: %s", e)
             return {
-                'total_tests': 0,
-                'average_name_length': 0,
-                'short_names_count': 0,
-                'descriptive_names_count': 0,
-                'naming_patterns': {},
-                'naming_quality_score': 0,
-                'short_names': []
+                'total_tests': 0, 'average_name_length': 0, 'short_names_count': 0,
+                'descriptive_names_count': 0, 'naming_patterns': {},
+                'naming_quality_score': 0, 'short_names': []
             }
 
     def detect_code_smells(self, tests_file):
+        """Detect common code smells in test code."""
         try:
             test_content = tests_file.read_text()
             tree = ast.parse(test_content)
 
             smells = {
                 'tests_without_assertions': [],
-                'very_long_tests': [],  # > 30 LOC
+                'very_long_tests': [],
                 'tests_with_try_except': [],
                 'tests_with_sleep': [],
                 'magic_numbers': [],
@@ -1244,36 +1084,15 @@ class ExperimentRunner:
                                 magic_nums.add(value)
 
                     if not has_assertion:
-                        smells['tests_without_assertions'].append({
-                            'test': node.name,
-                            'line': node.lineno
-                        })
-
+                        smells['tests_without_assertions'].append({'test': node.name, 'line': node.lineno})
                     if test_length > 30:
-                        smells['very_long_tests'].append({
-                            'test': node.name,
-                            'line': node.lineno,
-                            'length': test_length
-                        })
-
+                        smells['very_long_tests'].append({'test': node.name, 'line': node.lineno, 'length': test_length})
                     if has_try_except:
-                        smells['tests_with_try_except'].append({
-                            'test': node.name,
-                            'line': node.lineno
-                        })
-
+                        smells['tests_with_try_except'].append({'test': node.name, 'line': node.lineno})
                     if has_sleep:
-                        smells['tests_with_sleep'].append({
-                            'test': node.name,
-                            'line': node.lineno
-                        })
-
+                        smells['tests_with_sleep'].append({'test': node.name, 'line': node.lineno})
                     if len(magic_nums) > 3:
-                        smells['magic_numbers'].append({
-                            'test': node.name,
-                            'count': len(magic_nums),
-                            'numbers': list(magic_nums)[:10]
-                        })
+                        smells['magic_numbers'].append({'test': node.name, 'count': len(magic_nums), 'numbers': list(magic_nums)[:10]})
 
             smell_score = 100
             smell_score -= len(smells['tests_without_assertions']) * 20
@@ -1295,71 +1114,11 @@ class ExperimentRunner:
             }
 
         except Exception as e:
-            logger.warning(f"Code smell detection failed: {e}")
-            return {
-                'smells': {},
-                'smell_score': 100,
-                'total_smells_found': 0
-            }
+            logger.warning("Code smell detection failed: %s", e)
+            return {'smells': {}, 'smell_score': 100, 'total_smells_found': 0}
 
-    def analyze_test_quality(self, test_content):
-        quality = {
-            'has_setup_teardown': False,
-            'uses_assertions': 0,
-            'tests_with_multiple_assertions': 0,
-            'uses_context_managers': 0,
-            'has_edge_case_testing': False,
-            'has_error_testing': 0,
-            'average_test_length': 0
-        }
-        
-        lines = test_content.split('\n')
-        test_methods = []
-        current_test = []
-        in_test = False
-        
-        for line in lines:
-            if line.strip().startswith('def test_'):
-                if current_test:
-                    test_methods.append(current_test)
-                current_test = [line]
-                in_test = True
-            elif in_test:
-                if line.strip().startswith('def ') and not line.strip().startswith('def test_'):
-                    in_test = False
-                    test_methods.append(current_test)
-                    current_test = []
-                else:
-                    current_test.append(line)
-        
-        if current_test:
-            test_methods.append(current_test)
-        
-        total_assertions = 0
-        for test in test_methods:
-            test_text = '\n'.join(test)
-            
-            assertions = test_text.count('assert')
-            total_assertions += assertions
-            
-            if assertions > 1:
-                quality['tests_with_multiple_assertions'] += 1
-                
-            if 'with ' in test_text and ('assertRaises' in test_text or 'pytest.raises' in test_text):
-                quality['uses_context_managers'] += 1
-                
-            if any(keyword in test_text.lower() for keyword in ['assertraises', 'exception', 'error', 'valueerror']):
-                quality['has_error_testing'] += 1
-        
-        quality['uses_assertions'] = total_assertions
-        quality['average_test_length'] = sum(len(test) for test in test_methods) / len(test_methods) if test_methods else 0
-        
-        if 'def setUp' in test_content or 'def tearDown' in test_content:
-            quality['has_setup_teardown'] = True
-            
-        return quality
-    
     def generate_comprehensive_summary(self, analysis_results, experiment_data):
+        """Generate summary dict from all analysis results."""
         summary = {
             'model': experiment_data['model'],
             'strategy': experiment_data['strategy'],
@@ -1367,7 +1126,7 @@ class ExperimentRunner:
             'timestamp': experiment_data['timestamp'],
             'response_time': experiment_data['response_time']
         }
-        
+
         if 'compilation' in analysis_results and analysis_results['compilation']:
             comp = analysis_results['compilation']
             summary['compilation_success_rate'] = 100 if comp['compilation_success'] else 0
@@ -1375,36 +1134,36 @@ class ExperimentRunner:
             summary['tests_generated'] = comp.get('tests_run', 0)
             summary['tests_passed'] = comp.get('tests_passed', 0)
             summary['tests_failed'] = comp.get('tests_failed', 0)
-            
+
             if summary['tests_generated'] > 0:
                 summary['test_success_rate'] = round((summary['tests_passed'] / summary['tests_generated']) * 100, 1)
             else:
                 summary['test_success_rate'] = 0
-        
+
         if 'coverage' in analysis_results and analysis_results['coverage']:
             cov = analysis_results['coverage']
             summary['statement_coverage'] = cov.get('coverage_percent', 0)
             summary['branch_coverage'] = cov.get('branch_coverage_percent', 0)
             summary['missing_statements'] = cov.get('missing', 0)
             summary['total_statements'] = cov.get('statements', 0)
-        
+
         if 'mutation' in analysis_results and analysis_results['mutation']:
             mut = analysis_results['mutation']
             summary['mutation_score'] = mut.get('mutation_score', 0)
             summary['mutants_killed'] = mut.get('killed', 0)
             summary['mutants_survived'] = mut.get('survived', 0)
             summary['total_mutants'] = mut.get('total_mutants', 0)
-        
+
         if 'scenarios' in analysis_results and analysis_results['scenarios']:
             scen = analysis_results['scenarios']
             summary['total_test_methods'] = scen.get('total_test_methods', 0)
 
-            quality = scen.get('quality_metrics', {})
-            summary['total_assertions'] = quality.get('uses_assertions', 0)
-            summary['tests_with_error_handling'] = quality.get('has_error_testing', 0)
-            summary['average_test_length'] = round(quality.get('average_test_length', 0), 1)
-            summary['has_setup_teardown'] = quality.get('has_setup_teardown', False)
-            summary['tests_with_multiple_assertions'] = quality.get('tests_with_multiple_assertions', 0)
+            # Get assertion data from individual quality method
+            assertion_quality = scen.get('assertion_quality', {})
+            summary['total_assertions'] = assertion_quality.get('total_assertions', 0)
+
+            # Get error handling data from exception quality method
+            summary['tests_with_error_handling'] = scen.get('exception_quality', {}).get('exception_tests_count', 0)
 
             tested_methods = scen.get('tested_methods', {})
             summary['methods_tested_count'] = tested_methods.get('methods_tested_count', 0)
@@ -1412,8 +1171,6 @@ class ExperimentRunner:
             summary['method_coverage_rate'] = tested_methods.get('method_coverage_rate', 0)
 
             duplicates = scen.get('duplicates', {})
-            # Use unique_duplicate_tests (actual count of duplicate tests, not pairs)
-            # Fall back to duplicate_pairs_found for backward compatibility with old data
             summary['duplicate_tests_found'] = duplicates.get('unique_duplicate_tests',
                                                                duplicates.get('duplicate_pairs_found', 0))
 
@@ -1422,7 +1179,6 @@ class ExperimentRunner:
             else:
                 summary['avg_assertions_per_test'] = 0
 
-            assertion_quality = scen.get('assertion_quality', {})
             summary['assertion_quality_score'] = assertion_quality.get('assertion_quality_score', 0)
             summary['weak_assertions_count'] = assertion_quality.get('weak_assertions_count', 0)
             summary['strong_assertions_count'] = assertion_quality.get('strong_assertions_count', 0)
@@ -1455,134 +1211,11 @@ class ExperimentRunner:
             summary['overall_quality_score'] = round(sum(quality_scores), 1)
 
         return summary
-    
+
     def save_analysis_results(self, result_dir, analysis_results, experiment_data):
+        """Save analysis results to JSON."""
         analysis_file = result_dir / "analysis_results.json"
         with open(analysis_file, 'w', encoding='utf-8') as f:
             json.dump(analysis_results, f, indent=2, ensure_ascii=False)
-        
-        self.generate_csv_analysis(result_dir, analysis_results, experiment_data)
-        
-        self.generate_markdown_summary(result_dir, analysis_results, experiment_data)
-        
-        logger.info(f"✓ Analysis results saved to {result_dir}")
-    
-    def generate_csv_analysis(self, result_dir, analysis_results, experiment_data):
-        import csv
 
-        model_name = experiment_data['model'].replace('.', '').replace(' ', '-')
-        csv_file = result_dir / f"analiza-{model_name}.csv"
-
-        rows = []
-
-        if 'scenarios' in analysis_results and analysis_results['scenarios']:
-            tested_methods = analysis_results['scenarios'].get('tested_methods', {})
-            method_calls = tested_methods.get('method_call_counts', {})
-
-            for method, count in method_calls.items():
-                rows.append({
-                    'Category': 'Tested Method',
-                    'Name': method,
-                    'Count': count,
-                    'Details': f'Called {count} times in tests'
-                })
-
-            duplicates = analysis_results['scenarios'].get('duplicates', {})
-            for dup in duplicates.get('duplicates', []):
-                rows.append({
-                    'Category': 'Potential Duplicate',
-                    'Name': f"{dup['test1']} <-> {dup['test2']}",
-                    'Count': dup['similarity'],
-                    'Details': f"Similarity: {dup['similarity']}% (lines {dup['test1_line']}, {dup['test2_line']})"
-                })
-
-        with open(csv_file, 'w', newline='', encoding='utf-8') as f:
-            writer = csv.DictWriter(f, fieldnames=['Category', 'Name', 'Count', 'Details'])
-            writer.writeheader()
-            writer.writerows(rows)
-
-        logger.info(f"✓ CSV analysis saved to {csv_file}")
-    
-    def generate_markdown_summary(self, result_dir, analysis_results, experiment_data):
-        summary = analysis_results.get('summary', {})
-        model_name = experiment_data['model']
-        strategy = experiment_data['strategy']
-        context = experiment_data['context_type']
-
-        md_file = result_dir / f"podsumowanie-{model_name.replace('.', '').replace(' ', '-')}.md"
-
-        content = f"""# Unit Test Coverage Analysis Summary (Model: {model_name})
-# Context: {context}
-# Prompt Strategy: {strategy.replace('_', '-')}
-
-## coverage.py
-- missing: {summary.get('missing_statements', 'N/A')}
-- coverage: {summary.get('statement_coverage', 'N/A')}%
-
-## mutmut.py
-⠋ {summary.get('total_mutants', 0)}/{summary.get('total_mutants', 0)}  🎉 {summary.get('mutants_killed', 0)} 🫥 0  ⏰ 0  🤔 0  🙁 {summary.get('mutants_survived', 0)}  🔇 0
-
-## Results
-- Compilation success rate: {summary.get('compilation_success_rate', 0)}%
-- Statement coverage: {summary.get('statement_coverage', 0)}%
-- Branch coverage: {summary.get('branch_coverage', 0)}%
-- Mutation score: {summary.get('mutation_score', 0)}%
-
-## Test Quality Metrics (Objective)
-
-### Test Execution
-- Tests generated: {summary.get('total_test_methods', 0)}
-- Tests passed: {summary.get('tests_passed', 0)}
-- Tests failed: {summary.get('tests_failed', 0)}
-- Test success rate: {summary.get('test_success_rate', 0)}%
-
-### Method Coverage
-- {self.class_name} methods tested: {summary.get('methods_tested_count', 0)}/{summary.get('total_methods', len(self.known_methods))}
-- Method coverage rate: {summary.get('method_coverage_rate', 0)}%
-
-### Test Structure
-- Total assertions: {summary.get('total_assertions', 0)}
-- Average assertions per test: {summary.get('avg_assertions_per_test', 0)}
-- Tests with multiple assertions: {summary.get('tests_with_multiple_assertions', 0)}
-- Tests with error handling: {summary.get('tests_with_error_handling', 0)}
-- Has setUp/tearDown: {'Yes' if summary.get('has_setup_teardown', False) else 'No'}
-- Average test length (LOC): {summary.get('average_test_length', 0)}
-
-### Code Quality
-- Duplicate tests found (>=99.5% similarity): {summary.get('duplicate_tests_found', 0)}
-
-## Advanced Quality Analysis
-
-### Assertion Quality
-- Assertion quality score: {summary.get('assertion_quality_score', 0)}%
-- Strong assertions: {summary.get('strong_assertions_count', 0)}
-- Weak assertions: {summary.get('weak_assertions_count', 0)}
-
-### Exception Testing Quality
-- Exception quality score: {summary.get('exception_quality_score', 0)}%
-- Exception tests: {summary.get('exception_tests_count', 0)}
-- Tests checking exception messages: {summary.get('tests_with_message_check', 0)}
-
-### Test Independence
-- Independence score: {summary.get('independence_score', 100)}%
-- Tests are independent: {'Yes' if summary.get('is_independent', True) else 'No'}
-
-### Naming Quality
-- Naming quality score: {summary.get('naming_quality_score', 0)}%
-- Average test name length: {summary.get('average_name_length', 0)} characters
-
-### Code Smells
-- Code smell score: {summary.get('smell_score', 100)}% (100 = no smells)
-- Total code smells found: {summary.get('total_smells_found', 0)}
-
-## Overall Quality Score
-**{summary.get('overall_quality_score', 0)}%** (weighted average of all quality metrics)
-
-## Automatically generated by LLM Testing Automation
-- Response time: {summary.get('response_time', 0):.2f}s
-- Generated at: {summary.get('timestamp', 'N/A')}
-
-"""
-
-        md_file.write_text(content, encoding='utf-8')
-        logger.info(f"✓ Markdown summary saved to {md_file}")
+        logger.info("Analysis results saved to %s", result_dir)
