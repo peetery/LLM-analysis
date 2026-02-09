@@ -11,8 +11,8 @@
   "coverage": {
     "statements": 93,
     "missing": 16,
-    "coverage_percent": 79,
-    "branch_coverage_percent": 71,
+    "coverage_percent": 83,
+    "branch_coverage_percent": 43,
     "partial_coverage": 0
   },
   "mutation": {
@@ -268,8 +268,8 @@
     "tests_passed": 52,
     "tests_failed": 9,
     "test_success_rate": 85.2,
-    "statement_coverage": 79,
-    "branch_coverage": 71,
+    "statement_coverage": 83,
+    "branch_coverage": 43,
     "missing_statements": 16,
     "total_statements": 93,
     "mutation_score": 22.1,
