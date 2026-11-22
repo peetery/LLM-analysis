@@ -23,11 +23,13 @@ Usage:
 from .base_cli_client import BaseCLIClient
 from .claude_code_client import ClaudeCodeClient
 from .gemini_cli_client import GeminiCLIClient
+from .qwen_client import QwenClient
 
 __all__ = [
     'BaseCLIClient',
     'ClaudeCodeClient',
     'GeminiCLIClient',
+    'QwenClient',
 ]
 
 __version__ = '1.0.0'

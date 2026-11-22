@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="ui-token" content="__UI_TOKEN__">
+  <title>Gemini Unit Test Lab</title>
+  <style>
+    :root { color-scheme: dark; font-family: system-ui,sans-serif; background:#101722; color:#e6edf6; }
+    body { max-width:1100px; margin:32px auto; padding:0 20px; }
+    h1 { margin-bottom:6px; } p { color:#aab9ce; line-height:1.5; }
+    .grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+    .panel { background:#172234; border:1px solid #304059; border-radius:12px; padding:20px; margin:18px 0; }
+    label { display:block; font-weight:600; margin:14px 0 7px; }
+    input,select,textarea,button { box-sizing:border-box; font:inherit; }
+    input:not([type=checkbox]),select,textarea { width:100%; background:#0d1624; color:#e6edf6; border:1px solid #40516b; border-radius:6px; padding:10px; }
+    textarea { height:310px; font:13px/1.5 ui-monospace,monospace; resize:vertical; }
+    button { border:0; border-radius:7px; padding:12px 18px; background:#4788f5; color:white; cursor:pointer; margin:12px 8px 0 0; }
+    button:disabled { opacity:.5; cursor:wait; }
+    .check { display:flex; gap:10px; align-items:center; }
+    .check input { width:18px; height:18px; }
+    small { color:#aab9ce; display:block; line-height:1.5; }
+    pre { white-space:pre-wrap; overflow-wrap:anywhere; max-height:300px; overflow:auto; font:13px/1.6 ui-monospace,monospace; }
+    .metrics { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+    .metric { background:#0d1624; padding:16px; border-radius:8px; }
+    .metric strong { display:block; font-size:26px; margin-top:8px; }
+    #status { font-weight:700; } .ok { color:#67dfa7; } .bad { color:#ffa78f; }
+    #error { color:#ffa78f; white-space:pre-wrap; overflow-wrap:anywhere; }
+    [hidden] { display:none !important; }
+    @media(max-width:760px) { .grid { grid-template-columns:1fr; } .metrics { grid-template-columns:1fr 1fr; } }
+  </style>
+</head>
+<body>
+  <h1>Gemini Unit Test Lab</h1>
+  <p>Generate real tests with Gemini 3.6 Flash via Google directly, execute them, then measure branch coverage and a frozen mutant pool.</p>
+  <div class="grid">
+    <section class="panel">
+      <h2>Python source</h2>
+      <label for="sample">Built-in sample</label>
+      <select id="sample"><option value="">Upload or paste your own source</option></select>
+      <label for="file">Upload a .py file</label>
+      <input id="file" type="file" accept=".py">
+      <label for="filename">Module filename</label>
+      <input id="filename" value="sample.py" spellcheck="false">
+      <label for="source">Source sent to the model</label>
+      <textarea id="source" spellcheck="false" placeholder="Select a sample, upload, or paste Python code."></textarea>
+    </section>
+    <section class="panel">
+      <h2>Run settings</h2>
+      <label for="key">Google Gemini API key</label>
+      <input id="key" type="password" autocomplete="off" placeholder="Private key; never saved to disk">
+      <small>Passed to the local worker in memory. Not put in commands, URLs, logs, or saved reports.</small>
+      <label class="check"><input id="fresh" type="checkbox" checked>Fresh paid LLM generation</label>
+      <small>Checked: no old suite/cache is loaded. Unchecked: a qualified unchanged suite may be reused.</small>
+      <label for="budget">Maximum feedback requests</label>
+      <select id="budget">
+        <option value="0">0 - initial generation only</option>
+        <option value="1">1 - up to 2 paid requests total</option>
+        <option value="2" selected>2 - up to 3 paid requests total</option>
+      </select>
+      <p><strong>Quality gates:</strong> branch coverage &ge;98%, mutation score &gt;60%, all reference tests passing.</p>
+      <small>Fresh scores are not guaranteed. Failed generation, truncated output, failing tests, or missed targets remain blocked. Only development mutants guide feedback.</small>
+      <button id="run">Run fresh paid Gemini</button>
+      <p id="error" role="alert"></p>
+    </section>
+  </div>
+  <section class="panel" aria-live="polite">
+    <h2 id="status">Ready</h2>
+    <div class="metrics">
+      <div class="metric">Branch coverage<strong id="branch">--</strong></div>
+      <div class="metric">Mutation score<strong id="mutation">--</strong></div>
+      <div class="metric">Reference tests<strong id="tests">--</strong></div>
+      <div class="metric">LLM requests<strong id="requests">--</strong></div>
+    </div>
+    <p id="details"></p>
+    <h3>Live progress</h3>
+    <pre id="logs">No run started.</pre>
+    <div id="downloads" hidden>
+      <button data-artifact="tests.py">Download tests</button>
+      <button data-artifact="report.json">Download report</button>
+      <button data-artifact="initial_response.json">Download original LLM response</button>
+    </div>
+    <h3 id="test-heading" hidden>Generated tests</h3>
+    <pre id="test-code" hidden></pre>
+  </section>
+  <script>
+    const token = document.querySelector('meta[name="ui-token"]').content;
+    const el = id => document.getElementById(id);
+    let samples = [], active = null, timer = null;
+    async function api(path, options = {}) {
+      const response = await fetch(path, {
+        ...options, cache: 'no-store',
+        headers: {'X-Qwen-UI-Token': token, ...(options.headers || {})}
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Request failed.');
+      return data;
+    }
+    function loadSample(index) {
+      if (index === '') return;
+      const sample = samples[Number(index)];
+      el('filename').value = sample.filename;
+      el('source').value = sample.source;
+    }
+    api('/api/samples').then(data => {
+      samples = data;
+      samples.forEach((sample, index) => {
+        const option = document.createElement('option');
+        option.value = String(index); option.textContent = sample.filename;
+        el('sample').append(option);
+      });
+      if (samples.length) { el('sample').value = '0'; loadSample('0'); }
+    }).catch(error => { el('error').textContent = error.message; });
+    el('sample').addEventListener('change', event => loadSample(event.target.value));
+    el('file').addEventListener('change', async event => {
+      const file = event.target.files[0];
+      if (!file) return;
+      if (file.size > 65536) { el('error').textContent = 'Source must be at most 64 KB.'; return; }
+      el('sample').value = ''; el('filename').value = file.name;
+      el('source').value = await file.text();
+    });
+    el('fresh').addEventListener('change', () => {
+      el('run').textContent = el('fresh').checked ? 'Run fresh paid Gemini' : 'Run Gemini / verified cache';
+    });
+    api('/api/current').then(job => {
+      if (job.id) {
+        active = job.id;
+        el('run').disabled = true;
+        el('status').textContent = 'Restoring saved run progress...';
+        poll();
+      }
+    }).catch(error => { el('error').textContent = error.message; });
+    const percent = value => typeof value === 'number' ? value.toFixed(2) + '%' : '--';
+    async function poll() {
+      try {
+        const job = await api('/api/runs/' + active);
+        el('logs').textContent = job.logs.join('\n');
+        el('logs').scrollTop = el('logs').scrollHeight;
+        if (job.status === 'running') { timer = setTimeout(poll, 1500); return; }
+        const report = job.report || {}, baseline = report.baseline || {};
+        el('status').textContent = report.quality_passed ? 'Verified - both targets achieved' : 'Blocked - not qualified';
+        el('status').className = report.quality_passed ? 'ok' : 'bad';
+        el('branch').textContent = percent(baseline.branch_coverage);
+        el('mutation').textContent = percent(report.mutation_score);
+        el('tests').textContent = baseline.tests === undefined ? '--' : baseline.tests + ' (' + baseline.status + ')';
+        el('requests').textContent = report.model_requests_this_run ?? '--';
+        el('error').textContent = report.error || '';
+        el('details').textContent = [
+          'Source: ' + job.filename,
+          'Cache hit: ' + Boolean(report.cache_hit),
+          'Saved responses replayed: ' + (report.replayed_responses_this_run || 0),
+          report.mutants ? 'Killed: ' + report.killed + '/' + report.mutants : '',
+          report.result_dir || ''
+        ].filter(Boolean).join(' | ');
+        el('downloads').hidden = !report.result_dir;
+        if (report.result_dir) {
+          const response = await fetch('/api/runs/' + active + '/artifacts/tests.py', {
+            headers: {'X-Qwen-UI-Token': token}
+          });
+          if (response.ok) {
+            el('test-code').textContent = await response.text();
+            el('test-code').hidden = false; el('test-heading').hidden = false;
+          }
+        }
+        el('run').disabled = false;
+      } catch (error) {
+        el('error').textContent = error.message + ' Reloading this page does not stop a server-side run.';
+        el('run').disabled = false;
+      }
+    }
+    el('run').addEventListener('click', async () => {
+      if (timer) clearTimeout(timer);
+      el('run').disabled = true; el('error').textContent = '';
+      el('status').textContent = 'Running - please wait'; el('status').className = '';
+      for (const id of ['branch','mutation','tests','requests']) el(id).textContent = '--';
+      el('details').textContent = ''; el('logs').textContent = 'Starting...';
+      el('downloads').hidden = true; el('test-code').hidden = true; el('test-heading').hidden = true;
+      let payload;
+      try {
+        payload = {
+          filename: el('filename').value, source: el('source').value,
+          api_key: el('key').value, fresh: el('fresh').checked,
+          budget: Number(el('budget').value)
+        };
+        el('key').value = '';
+        const job = await api('/api/runs', {
+          method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload)
+        });
+        active = job.id;
+        poll();
+      } catch (error) {
+        el('error').textContent = error.message;
+        el('status').textContent = 'Could not start'; el('run').disabled = false;
+      } finally {
+        if (payload) payload.api_key = '';
+      }
+    });
+    for (const button of document.querySelectorAll('[data-artifact]')) {
+      button.addEventListener('click', async () => {
+        try {
+          const name = button.dataset.artifact;
+          const response = await fetch('/api/runs/' + active + '/artifacts/' + name, {
+            headers: {'X-Qwen-UI-Token': token}
+          });
+          if (!response.ok) throw new Error('This artifact was not produced for this run.');
+          const url = URL.createObjectURL(await response.blob());
+          const link = document.createElement('a'); link.href = url; link.download = name;
+          link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+        } catch (error) { el('error').textContent = error.message; }
+      });
+    }
+  </script>
+</body>
+</html>

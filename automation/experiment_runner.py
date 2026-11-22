@@ -15,6 +15,7 @@ import difflib
 from pathlib import Path
 from datetime import datetime
 import shutil
+import sys
 from typing import Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -38,11 +39,13 @@ class ExperimentRunner:
     ]
 
     def __init__(self, base_results_dir="prompts_results",
-                 extractor: Optional['ClassContextExtractor'] = None):
+                 extractor: Optional['ClassContextExtractor'] = None,
+                 efficient_analysis=False):
         """Initialize the experiment runner."""
         self.base_results_dir = Path(base_results_dir)
         self.current_experiment = None
         self.extractor = extractor
+        self.efficient_analysis = efficient_analysis
 
         if extractor is not None:
             info = extractor.get_class_info()
@@ -100,7 +103,10 @@ class ExperimentRunner:
                 logger.error("%s.py not found - tests will fail", self.module_name)
 
         mutmut_test_file = result_dir / "mutmut_test.py"
-        self.create_filtered_test_file(tests_file, mutmut_test_file)
+        if self.efficient_analysis:
+            shutil.copy2(tests_file, mutmut_test_file)
+        else:
+            self.create_filtered_test_file(tests_file, mutmut_test_file)
 
         experiment_data = {
             'model': model_name,
@@ -109,7 +115,8 @@ class ExperimentRunner:
             'timestamp': timestamp,
             'response_time': response_time,
             'test_file': str(tests_file),
-            'raw_results': strategy_result
+            'raw_results': strategy_result,
+            'efficient_analysis': self.efficient_analysis
         }
 
         results_file = result_dir / "experiment_results.json"
@@ -443,7 +450,7 @@ class ExperimentRunner:
 
         return code_text
 
-    def run_analysis(self, result_dir, experiment_data):
+    def run_analysis(self, result_dir, experiment_data, mutation_testing=True):
         """Run complete analysis pipeline on generated tests."""
         tests_file = Path(experiment_data['test_file'])
 
@@ -453,19 +460,36 @@ class ExperimentRunner:
 
         analysis_results = {}
 
-        compilation_result = self.test_compilation_and_execution(tests_file)
+        if self.efficient_analysis:
+            compilation_result = {
+                'compilation_success': False, 'execution_success': False,
+                'tests_run': 0, 'tests_passed': 0, 'tests_failed': 0,
+                'test_errors': [], 'compilation_errors': []
+            }
+            try:
+                compile(tests_file.read_text(), str(tests_file), 'exec')
+                compilation_result['compilation_success'] = True
+            except (SyntaxError, ValueError) as exc:
+                compilation_result['compilation_errors'] = [str(exc)]
+        else:
+            compilation_result = self.test_compilation_and_execution(tests_file)
         analysis_results['compilation'] = compilation_result
 
         if not compilation_result['compilation_success']:
             logger.error("Tests do not compile")
 
         if compilation_result['compilation_success']:
-            coverage_results = self.run_coverage_analysis(result_dir, tests_file)
+            coverage_results = self.run_coverage_analysis(
+                result_dir, tests_file,
+                execution_result=compilation_result if self.efficient_analysis else None
+            )
             analysis_results['coverage'] = coverage_results
         else:
             analysis_results['coverage'] = None
 
-        if compilation_result['compilation_success']:
+        if (mutation_testing and compilation_result['compilation_success'] and
+                (not self.efficient_analysis or
+                 (compilation_result['execution_success'] and compilation_result['tests_run'] > 0))):
             mutation_results = self.run_mutation_testing(result_dir)
             analysis_results['mutation'] = mutation_results
         else:
@@ -481,37 +505,47 @@ class ExperimentRunner:
 
         return analysis_results
 
-    def run_coverage_analysis(self, result_dir, tests_file):
+    def run_coverage_analysis(self, result_dir, tests_file, execution_result=None):
         """Run coverage.py analysis on the test suite."""
         try:
             cmd = [
-                'python', '-m', 'coverage', 'run',
+                sys.executable, '-m', 'coverage', 'run',
                 '--source=.', '--branch', '-m', 'unittest',
-                tests_file.stem
+                tests_file.stem, '-v'
             ]
 
             result = subprocess.run(
                 cmd, cwd=result_dir, capture_output=True, text=True, timeout=120
             )
+            if execution_result is not None:
+                self.parse_unittest_results(result.stderr, execution_result)
+                execution_result['execution_success'] = (
+                    result.returncode == 0 and execution_result['execution_success']
+                )
+                if result.returncode != 0:
+                    execution_result['test_errors'] = [result.stderr]
 
             if result.returncode != 0:
                 logger.warning("Some tests failed during coverage run, continuing with analysis")
 
             report_result = subprocess.run(
-                ['python', '-m', 'coverage', 'report'],
-                cwd=result_dir, capture_output=True, text=True
+                [sys.executable, '-m', 'coverage', 'json', '-o', 'coverage.json'],
+                cwd=result_dir, capture_output=True, text=True, timeout=30
             )
 
             if report_result.returncode != 0:
                 logger.error("Coverage report generation failed: %s", report_result.stderr)
                 return None
 
-            subprocess.run(
-                ['python', '-m', 'coverage', 'html'],
-                cwd=result_dir, capture_output=True, text=True
-            )
+            if not self.efficient_analysis:
+                subprocess.run(
+                    [sys.executable, '-m', 'coverage', 'html'],
+                    cwd=result_dir, capture_output=True, text=True, timeout=30
+                )
 
-            coverage_data = self.parse_coverage_report(report_result.stdout)
+            coverage_data = self.parse_coverage_json(
+                json.loads((Path(result_dir) / 'coverage.json').read_text())
+            )
 
             if coverage_data:
                 logger.info("Coverage: %d%% statement, %d%% branch",
@@ -522,6 +556,28 @@ class ExperimentRunner:
         except Exception as e:
             logger.error("Coverage analysis failed: %s", e)
             return None
+
+    def parse_coverage_json(self, report):
+        for filename, data in report.get('files', {}).items():
+            if Path(filename).name != f'{self.module_name}.py':
+                continue
+            summary = data['summary']
+            statements = summary['num_statements']
+            branches = summary['num_branches']
+            return {
+                'statements': statements,
+                'missing': summary['missing_lines'],
+                'coverage_percent': round(
+                    100 * summary['covered_lines'] / statements, 2
+                ) if statements else 100.0,
+                'branch_coverage_percent': round(
+                    100 * summary['covered_branches'] / branches, 2
+                ) if branches else 100.0,
+                'partial_coverage': summary['num_partial_branches'],
+                'missing_lines': data.get('missing_lines', []),
+                'missing_branches': data.get('missing_branches', [])
+            }
+        return None
 
     def parse_coverage_report(self, coverage_output):
         """Parse coverage.py report output."""
