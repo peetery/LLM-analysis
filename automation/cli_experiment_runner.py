@@ -27,18 +27,36 @@ Usage:
 
 import logging
 import json
+import getpass
+import sys
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 
 from cli_automation import (
     ClaudeCodeClient,
-    GeminiCLIClient
+    GeminiCLIClient,
+    QwenClient
 )
+from cli_automation.gemini_api_client import GeminiAPIClient
 
 from experiment_runner import ExperimentRunner
 from prompt_strategies import SimplePrompting, ChainOfThoughtPrompting
 
 logger = logging.getLogger(__name__)
+
+
+def experiment_status(analysis):
+    compilation = (analysis or {}).get('compilation') or {}
+    if not compilation.get('compilation_success'):
+        return "Experiment finished: generated tests did not compile"
+    if not compilation.get('execution_success'):
+        return (
+            f"Experiment finished: {compilation.get('tests_failed', 0)}/"
+            f"{compilation.get('tests_run', 0)} tests failed; no valid passing suite"
+        )
+    if not compilation.get('tests_run'):
+        return "Experiment finished: no tests collected"
+    return "Experiment completed: all generated tests passed"
 
 
 class CLIExperimentRunner:
@@ -50,7 +68,8 @@ class CLIExperimentRunner:
     - Universal mode (extractor provided): Uses any Python class
     """
 
-    def __init__(self, base_results_dir="cli_results", run_id=None, extractor=None):
+    def __init__(self, base_results_dir="cli_results", run_id=None, extractor=None,
+                 efficient_analysis=False, api_key=None, refine_failures=False):
         """
         Initialize the CLI experiment runner.
 
@@ -63,8 +82,12 @@ class CLIExperimentRunner:
         self.base_results_dir.mkdir(parents=True, exist_ok=True)
         self.run_id = run_id
         self.extractor = extractor
+        self.efficient_analysis = efficient_analysis
+        self.refine_failures = refine_failures
 
         self.cli_clients = {
+            'gemini-3.6-flash': lambda: GeminiAPIClient(api_key=api_key),
+            'qwen3-coder-30b': lambda: QwenClient(api_key=api_key),
             # Claude Code models (newest first)
             'claude-code-opus-4.5': lambda: ClaudeCodeClient(model="claude-opus-4.5"),
             'claude-code-sonnet-4.5': lambda: ClaudeCodeClient(model="claude-sonnet-4.5"),
@@ -157,9 +180,13 @@ class CLIExperimentRunner:
                 if not strategy_result:
                     logger.error("Strategy execution failed")
                     return None
+                if hasattr(client, 'provider_calls'):
+                    strategy_result['provider_calls'] = client.provider_calls
 
                 # Create analysis runner with extractor for universal mode
-                analysis_runner = ExperimentRunner(extractor=self.extractor)
+                analysis_runner = ExperimentRunner(
+                    extractor=self.extractor, efficient_analysis=self.efficient_analysis
+                )
 
                 experiment_data = analysis_runner.save_experiment_results(
                     result_dir,
@@ -175,14 +202,24 @@ class CLIExperimentRunner:
 
                 logger.info("Running analysis pipeline...")
                 analysis_results = analysis_runner.run_analysis(result_dir, experiment_data)
+                refinement = None
+                if (self.refine_failures and analysis_results and
+                        analysis_results['compilation']['compilation_success'] and
+                        not analysis_results['compilation']['execution_success']):
+                    from suite_refinement import refine_failed_suite
+                    refinement = refine_failed_suite(
+                        analysis_runner, result_dir, experiment_data, analysis_results, client=client
+                    )
+                    logger.info("Refinement accepted: %s", refinement['audit']['accepted'])
 
-                logger.info("Experiment completed successfully")
+                logger.info(experiment_status(analysis_results))
                 logger.info("Results saved to: %s", result_dir)
 
                 return {
                     'experiment': experiment_data,
                     'analysis': analysis_results,
-                    'result_dir': str(result_dir)
+                    'result_dir': str(result_dir),
+                    'refinement': refinement
                 }
 
         except Exception as e:
@@ -243,6 +280,7 @@ class CLIExperimentRunner:
             'Claude Code': [k for k in self.cli_clients if k.startswith('claude-code-')],
             'GitHub Copilot': [k for k in self.cli_clients if k.startswith('copilot-')],
             'Google Gemini': [k for k in self.cli_clients if k.startswith('gemini-')],
+            'OpenRouter Qwen': [k for k in self.cli_clients if k.startswith('qwen')],
         }
 
         for tool, models in groups.items():
@@ -296,6 +334,27 @@ Examples:
                         help='Run identifier: number (e.g., 1), "overwrite", or omit for auto-increment')
     parser.add_argument('--results-dir', type=str, default='cli_results',
                         help='Directory for storing results (default: cli_results)')
+    parser.add_argument('--efficient-analysis', action='store_true',
+                        help='Run execution/coverage once, skip HTML and never filter failing tests')
+    parser.add_argument('--prompt-key', action='store_true',
+                        help='Enter the selected provider key privately in an interactive terminal')
+    parser.add_argument('--refine-failures', action='store_true',
+                        help='Make at most one extra model request for validated numeric repairs')
+    parser.add_argument('--verified-cache', action='store_true',
+                        help='Require mutation > target and branch >= target; reuse unchanged verified suites')
+    parser.add_argument('--mutation-target', type=float, default=60)
+    parser.add_argument('--branch-target', type=float, default=98)
+    parser.add_argument('--cache-dir', type=Path, default=Path('.verified_qwen_cache'))
+    parser.add_argument('--resume-from', type=Path,
+                        help='Continue from an archived raw or admitted verified-mode model suite')
+    parser.add_argument('--replay-from', type=Path,
+                        help='Revalidate saved feedback responses without making model requests')
+    parser.add_argument('--max-refinements', type=int, choices=[0, 1, 2], default=2,
+                        help='Maximum new feedback requests; initial generation is separate (default: 2)')
+    parser.add_argument('--additions-only', action='store_true',
+                        help='Preserve a passing suite; reject all edits and validate up to 32 new tests')
+    parser.add_argument('--fresh', action='store_true',
+                        help='Bypass the verified cache and make a fresh paid generation')
 
     # Universal mode arguments
     parser.add_argument('--source-file', type=str, default=None,
@@ -306,6 +365,55 @@ Examples:
                         help='Force legacy mode even if --source-file is provided')
 
     args = parser.parse_args()
+    if args.verified_cache:
+        if (args.model not in ('qwen3-coder-30b', 'gemini-3.6-flash') or not args.source_file or args.config or
+                args.refine_failures or args.context != 'full_context' or args.legacy or
+                args.strategy not in (None, 'simple_prompting')):
+            parser.error('--verified-cache requires a single full-context Qwen or Gemini API source file run')
+        from verified_qwen import GEMINI_MODEL, MODEL, run_verified
+
+        def verified_client():
+            key = None
+            if args.prompt_key:
+                if not sys.stdin.isatty():
+                    raise RuntimeError('Generation: --prompt-key requires an interactive terminal.')
+                provider = 'Google Gemini' if args.model == GEMINI_MODEL else 'OpenRouter'
+                key = getpass.getpass(provider + ' API key (hidden): ')
+                if not key.strip():
+                    raise RuntimeError('No API key entered; no generation request made.')
+            return GeminiAPIClient(api_key=key) if args.model == GEMINI_MODEL else QwenClient(api_key=key)
+
+        report = run_verified(
+            args.source_file, args.results_dir, args.cache_dir, verified_client,
+            args.mutation_target, args.branch_target, args.resume_from,
+            max_refinements=args.max_refinements,
+            replay_from=args.replay_from,
+            additions_only=args.additions_only,
+            fresh=args.fresh,
+            model=GEMINI_MODEL if args.model == GEMINI_MODEL else MODEL
+        )
+        summary = {key: report.get(key) for key in (
+            'model', 'provider', 'status', 'quality_passed', 'cache_hit', 'model_requests_this_run',
+            'replayed_responses_this_run',
+            'mutation_score', 'mutants', 'killed', 'result_dir', 'error'
+        )}
+        summary.update(
+            branch_coverage=report.get('baseline', {}).get('branch_coverage'),
+            tests=report.get('baseline', {}).get('tests'),
+            test_status=report.get('baseline', {}).get('status')
+        )
+        print(json.dumps(summary, indent=2))
+        return 0 if report['quality_passed'] else 2
+    if args.resume_from or args.replay_from or args.fresh or args.additions_only:
+        parser.error('--resume-from, --replay-from, --fresh and --additions-only require --verified-cache')
+    if args.refine_failures and (
+            not args.efficient_analysis or args.model != 'qwen3-coder-30b' or args.config):
+        parser.error('--refine-failures requires a single Qwen experiment with --efficient-analysis')
+    api_key = None
+    if args.prompt_key:
+        if not sys.stdin.isatty():
+            parser.error('--prompt-key requires an interactive terminal')
+        api_key = getpass.getpass('OpenRouter API key (hidden): ')
 
     logging.basicConfig(
         level=logging.INFO,
@@ -358,7 +466,10 @@ Examples:
     runner = CLIExperimentRunner(
         base_results_dir=args.results_dir,
         run_id=run_id,
-        extractor=extractor
+        extractor=extractor,
+        efficient_analysis=args.efficient_analysis,
+        api_key=api_key,
+        refine_failures=args.refine_failures
     )
 
     if args.list_models:
@@ -383,8 +494,12 @@ Examples:
 
         if result:
             print("\n" + "="*60)
-            print("Experiment completed successfully")
+            print(experiment_status(result['analysis']))
             print(f"Results saved to: {result['result_dir']}")
+            if result.get('refinement'):
+                refinement = result['refinement']
+                print(f"Refinement accepted: {refinement['audit']['accepted']}")
+                print(f"Refinement saved to: {refinement['result_dir']}")
             print("="*60 + "\n")
         else:
             print("\n" + "="*60)
@@ -396,4 +511,4 @@ Examples:
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main() or 0)

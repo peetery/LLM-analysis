@@ -1,6 +1,6 @@
 # Core testing dependencies
 coverage>=7.0.0
-mutmut>=2.4.0
+mutmut>=3.8.1,<4
 
 # UI
 streamlit>=1.28.0

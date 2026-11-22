@@ -45,6 +45,8 @@ pip-delete-this-directory.txt
 
 # Django stuff:
 *.log
+.verified_qwen_cache/
+qwen_results/
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
